@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroFlow — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar__logo">
+      <span class="logo-icon">🧠</span>
+      <span class="logo-text">NeuroFlow</span>
+    </div>
+
+    <ul class="sidebar__nav" role="list">
+      <li>
+        <a href="#screen-dashboard" class="nav-link nav-link--active" aria-current="page" data-screen="dashboard">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+      </li>
+      <li>
+        <a href="#screen-tasks" class="nav-link" data-screen="tasks">
+          <span class="nav-icon">✨</span>
+          <span class="nav-label">New Task</span>
+        </a>
+      </li>
+      <li>
+        <a href="#screen-profile" class="nav-link" data-screen="profile">
+          <span class="nav-icon">👤</span>
+          <span class="nav-label">Profile</span>
+        </a>
+      </li>
+      <li>
+        <a href="#screen-achievements" class="nav-link" data-screen="achievements">
+          <span class="nav-icon">🏆</span>
+          <span class="nav-label">Achievements</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar__accessibility">
+      <p class="sidebar__section-label">Accessibility</p>
+      <label class="toggle-row" for="toggle-dark">
+        <span>Dark Mode</span>
+        <div class="toggle" id="toggle-dark" role="switch" aria-checked="false" tabindex="0">
+          <div class="toggle__thumb"></div>
+        </div>
+      </label>
+      <label class="toggle-row" for="toggle-dyslexic">
+        <span>OpenDyslexic</span>
+        <div class="toggle" id="toggle-dyslexic" role="switch" aria-checked="false" tabindex="0">
+          <div class="toggle__thumb"></div>
+        </div>
+      </label>
+      <label class="toggle-row" for="toggle-focus">
+        <span>Focus Mode</span>
+        <div class="toggle" id="toggle-focus" role="switch" aria-checked="false" tabindex="0">
+          <div class="toggle__thumb"></div>
+        </div>
+      </label>
+      <label class="toggle-row" for="toggle-spacing">
+        <span>Extra Spacing</span>
+        <div class="toggle" id="toggle-spacing" role="switch" aria-checked="false" tabindex="0">
+          <div class="toggle__thumb"></div>
+        </div>
+      </label>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main" id="main-content">
+
+    <!-- DASHBOARD SCREEN -->
+    <section class="screen screen--dashboard" id="screen-dashboard" aria-label="Dashboard">
+
+      <!-- Header -->
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Hey, Blair 👋</h1>
+          <p class="page-subtitle">You're on a <strong>5-day streak</strong> — keep it going!</p>
+        </div>
+        <div class="header-actions">
+          <a href="#screen-tasks" class="btn btn--primary" data-screen="tasks">+ New Task</a>
+        </div>
+      </header>
+
+      <!-- Stat Cards -->
+      <div class="stat-grid" role="list" aria-label="Your stats">
+
+        <article class="stat-card stat-card--coral" role="listitem">
+          <div class="stat-card__icon" aria-hidden="true">⚡</div>
+          <div class="stat-card__body">
+            <p class="stat-card__label">Total XP</p>
+            <p class="stat-card__value" id="stat-xp">1,240</p>
+          </div>
+        </article>
+
+        <article class="stat-card stat-card--mint" role="listitem">
+          <div class="stat-card__icon" aria-hidden="true">🔥</div>
+          <div class="stat-card__body">
+            <p class="stat-card__label">Day Streak</p>
+            <p class="stat-card__value" id="stat-streak">5</p>
+          </div>
+        </article>
+
+        <article class="stat-card stat-card--sky" role="listitem">
+          <div class="stat-card__icon" aria-hidden="true">✅</div>
+          <div class="stat-card__body">
+            <p class="stat-card__label">Tasks Done</p>
+            <p class="stat-card__value" id="stat-tasks">18</p>
+          </div>
+        </article>
+
+        <article class="stat-card stat-card--lavender" role="listitem">
+          <div class="stat-card__icon" aria-hidden="true">🏅</div>
+          <div class="stat-card__body">
+            <p class="stat-card__label">Badges</p>
+            <p class="stat-card__value" id="stat-badges">4</p>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- Level Progress -->
+      <div class="level-card">
+        <div class="level-card__header">
+          <div class="level-badge" aria-label="Current level: 7">
+            <span class="level-badge__num">7</span>
+          </div>
+          <div class="level-card__info">
+            <p class="level-card__title">Level 7 — <span class="level-card__rank">Code Explorer</span></p>
+            <p class="level-card__sub">240 XP to Level 8</p>
+          </div>
+          <div class="level-card__next" aria-hidden="true">Level 8 →</div>
+        </div>
+        <div class="progress-track" role="progressbar" aria-valuenow="76" aria-valuemin="0" aria-valuemax="100" aria-label="Level progress: 76%">
+          <div class="progress-fill" id="level-progress" style="--progress: 76%"></div>
+        </div>
+        <p class="progress-label">1,240 / 1,500 XP</p>
+      </div>
+
+      <!-- Recent Tasks -->
+      <section class="tasks-section" aria-labelledby="recent-tasks-heading">
+        <div class="tasks-section__header">
+          <h2 id="recent-tasks-heading" class="section-title">Recent Tasks</h2>
+          <a href="#screen-tasks" class="link-subtle" data-screen="tasks">See all →</a>
+        </div>
+
+        <ul class="task-list" role="list" id="task-list">
+
+          <li class="task-item task-item--done" role="listitem">
+            <div class="task-item__status" aria-label="Completed">
+              <span class="status-dot status-dot--done" aria-hidden="true"></span>
+            </div>
+            <div class="task-item__body">
+              <p class="task-item__title">Set up Flask app factory pattern</p>
+              <p class="task-item__meta">Completed · 6 steps · <span class="tag tag--mint">Backend</span></p>
+            </div>
+            <div class="task-item__xp" aria-label="XP earned: 80">+80 XP</div>
+          </li>
+
+          <li class="task-item task-item--active" role="listitem">
+            <div class="task-item__status" aria-label="In progress">
+              <span class="status-dot status-dot--active" aria-hidden="true"></span>
+            </div>
+            <div class="task-item__body">
+              <p class="task-item__title">Write Literature Review Section 2.4</p>
+              <p class="task-item__meta">In progress · Step 3 of 5 · <span class="tag tag--lavender">Dissertation</span></p>
+            </div>
+            <div class="task-item__xp task-item__xp--pending" aria-label="XP pending: 60">+60 XP</div>
+          </li>
+
+          <li class="task-item task-item--done" role="listitem">
+            <div class="task-item__status" aria-label="Completed">
+              <span class="status-dot status-dot--done" aria-hidden="true"></span>
+            </div>
+            <div class="task-item__body">
+              <p class="task-item__title">Design dark mode UI mockups</p>
+              <p class="task-item__meta">Completed · 4 steps · <span class="tag tag--coral">Design</span></p>
+            </div>
+            <div class="task-item__xp" aria-label="XP earned: 50">+50 XP</div>
+          </li>
+
+          <li class="task-item task-item--done" role="listitem">
+            <div class="task-item__status" aria-label="Completed">
+              <span class="status-dot status-dot--done" aria-hidden="true"></span>
+            </div>
+            <div class="task-item__body">
+              <p class="task-item__title">Configure WSL2 + Docker + Ollama</p>
+              <p class="task-item__meta">Completed · 8 steps · <span class="tag tag--sky">DevOps</span></p>
+            </div>
+            <div class="task-item__xp" aria-label="XP earned: 100">+100 XP</div>
+          </li>
+
+        </ul>
+      </section>
+
+    </section>
+    <!-- end dashboard screen -->
+
+    <section class="screen" id="screen-tasks" aria-label="New Task" hidden>
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">New Task</h1>
+          <p class="page-subtitle">Add your next step and keep your streak alive.</p>
+        </div>
+      </header>
+
+      <div class="level-card">
+        <p class="level-card__title">Task creator coming soon</p>
+        <p class="level-card__sub">Use this placeholder page for now while task form logic is wired up.</p>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-profile" aria-label="Profile" hidden>
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Profile</h1>
+          <p class="page-subtitle">View your settings, preferences, and progress snapshot.</p>
+        </div>
+      </header>
+
+      <div class="level-card">
+        <p class="level-card__title">Profile details coming soon</p>
+        <p class="level-card__sub">This page is now accessible and ready for profile data integration.</p>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-achievements" aria-label="Achievements" hidden>
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Achievements</h1>
+          <p class="page-subtitle">Track badges, milestones, and long-term goals.</p>
+        </div>
+      </header>
+
+      <div class="level-card">
+        <p class="level-card__title">Achievements board coming soon</p>
+        <p class="level-card__sub">This section is active and ready for badge and milestone content.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='js/APP.js') }}"></script>
+</body>
+</html>
