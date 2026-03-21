@@ -76,6 +76,28 @@ document.addEventListener('DOMContentLoaded', () => {
     achievements: document.getElementById('screen-achievements')
   };
 
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  const savedSidebarCollapsed = localStorage.getItem('nf-sidebar-collapsed') === 'true';
+
+  function setSidebarCollapsed(collapsed) {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    localStorage.setItem('nf-sidebar-collapsed', String(collapsed));
+    if (sidebarToggle) {
+      const expanded = !collapsed;
+      sidebarToggle.setAttribute('aria-expanded', String(expanded));
+      sidebarToggle.setAttribute('aria-label', expanded ? 'Close navigation menu' : 'Open navigation menu');
+    }
+  }
+
+  setSidebarCollapsed(savedSidebarCollapsed);
+
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+      const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+      setSidebarCollapsed(!isCollapsed);
+    });
+  }
+
   function showScreen(screenName) {
     if (!screens[screenName]) return;
 

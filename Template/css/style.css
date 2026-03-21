@@ -80,8 +80,11 @@ body.a11y-spacing {
 
 /* ── Accessibility: Focus Mode ── */
 body.a11y-focus .sidebar {
-  opacity: 0.25;
-  pointer-events: none;
+  opacity: 0.55;
+}
+
+body.a11y-focus .sidebar__accessibility {
+  opacity: 1;
 }
 
 /* ── Reset ── */
@@ -100,6 +103,33 @@ a { color: inherit; text-decoration: none; }
 ul { list-style: none; }
 img { display: block; max-width: 100%; }
 button { font-family: var(--font-body); cursor: pointer; border: none; background: none; }
+
+.sidebar-toggle {
+  display: inline-flex;
+  position: fixed;
+  top: calc(var(--sidebar-gap) + 8px);
+  left: calc(var(--sidebar-gap) + var(--sidebar-w) - 52px);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  z-index: 240;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  transition: left 0.3s ease;
+}
+
+body.sidebar-collapsed .sidebar-toggle {
+  left: 12px;
+}
+
+.sidebar-toggle__icon {
+  line-height: 1;
+}
 
 
 /* ============================================================
@@ -120,8 +150,12 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
   left: var(--sidebar-gap);
   bottom: var(--sidebar-gap);
   overflow-y: auto;
-  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+  transition: transform 0.3s ease, background var(--transition), border-color var(--transition), box-shadow var(--transition);
   z-index: 100;
+}
+
+body.sidebar-collapsed .sidebar {
+  transform: translateX(calc(-100% - var(--sidebar-gap)));
 }
 
 .sidebar__logo {
@@ -244,6 +278,11 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
   flex: 1;
   padding: 36px 40px;
   max-width: 900px;
+  transition: margin-left 0.3s ease;
+}
+
+body.sidebar-collapsed .main {
+  margin-left: var(--sidebar-gap);
 }
 
 .screen { animation: fadeUp 0.32s ease both; }
@@ -634,7 +673,15 @@ button { font-family: var(--font-body); cursor: pointer; border: none; backgroun
 
 @media (max-width: 768px) {
   :root { --sidebar-w: 200px; --sidebar-gap: 12px; }
-  .main { padding: 24px 20px; }
+  .main {
+    margin-left: calc(var(--sidebar-w) + (var(--sidebar-gap) * 2));
+    padding: 72px 20px 24px;
+  }
+
+  body.sidebar-collapsed .main {
+    margin-left: var(--sidebar-gap);
+  }
+
   .page-title { font-size: 1.5rem; }
   .stat-grid  { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 }

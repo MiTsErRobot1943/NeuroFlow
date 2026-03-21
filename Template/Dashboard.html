@@ -11,8 +11,20 @@
 </head>
 <body>
 
+  <button
+    id="sidebar-toggle"
+    class="sidebar-toggle"
+    type="button"
+    aria-controls="sidebar"
+    aria-expanded="true"
+    aria-label="Open navigation menu"
+  >
+    <span class="sidebar-toggle__icon" aria-hidden="true">☰</span>
+  </button>
+
+
   <!-- SIDEBAR -->
-  <nav class="sidebar" role="navigation" aria-label="Main navigation">
+  <nav class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="sidebar__logo">
       <span class="logo-icon">🧠</span>
       <span class="logo-text">NeuroFlow</span>
@@ -83,10 +95,14 @@
       <!-- Header -->
       <header class="page-header">
         <div>
-          <h1 class="page-title">Hey, Blair 👋</h1>
+          <h1 class="page-title">Hey, {{ username|e }} 👋</h1>
           <p class="page-subtitle">You're on a <strong>5-day streak</strong> — keep it going!</p>
         </div>
         <div class="header-actions">
+          <form method="post" action="{{ url_for('logout') }}" style="display:inline-block;margin-right:0.5rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            <button type="submit" class="btn">Logout</button>
+          </form>
           <a href="#screen-tasks" class="btn btn--primary" data-screen="tasks">+ New Task</a>
         </div>
       </header>

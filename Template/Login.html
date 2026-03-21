@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroFlow - Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <main class="main" style="display:flex;justify-content:center;align-items:center;min-height:100vh;padding:1rem;">
+    <section class="level-card" style="width:100%;max-width:420px;">
+      <h1 class="page-title" style="margin-bottom:0.5rem;">Welcome back</h1>
+      <p class="page-subtitle" style="margin-bottom:1rem;">Sign in to continue to your dashboard.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <p role="alert" style="margin-bottom:0.75rem;color:{% if category == 'error' %}#b30000{% else %}#004d00{% endif %};">{{ message }}</p>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('login') }}" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+        <label for="username">Username</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          minlength="3"
+          maxlength="50"
+          pattern="[A-Za-z0-9_.-]{3,50}"
+          required
+          style="width:100%;margin:0.35rem 0 0.9rem 0;padding:0.65rem;border:1px solid #cbd5e1;border-radius:10px;"
+        />
+
+        <label for="password">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          minlength="8"
+          required
+          style="width:100%;margin:0.35rem 0 1rem 0;padding:0.65rem;border:1px solid #cbd5e1;border-radius:10px;"
+        />
+
+        <button class="btn btn--primary" type="submit" style="width:100%;">Login</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
+
