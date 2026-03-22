@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuroflow"
+version = "1.0.0"
+description = "NeuroFlow: An AI-powered task management and learning platform with web and desktop modes"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Blair", email = "blair@neuroflow.local"}
+]
+requires-python = ">=3.12"
+
+dependencies = [
+    "Flask>=3.0,<4.0",
+    "gunicorn>=22.0,<23.0",
+    "Werkzeug>=3.0,<4.0",
+    "pywebview>=5.0,<6.0",
+    "pyinstaller>=6.0,<7.0",
+    "langchain>=0.3,<0.4",
+    "langchain-community>=0.3,<0.4",
+    "langchain-ollama>=0.2,<0.3",
+    "ollama>=0.6,<0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4,<8.0",
+    "pytest-cov>=4.1,<5.0",
+    "mypy>=1.5,<2.0",
+    "ruff>=0.1,<0.2",
+    "black>=23.9,<24.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/example/neuroflow"
+"Documentation" = "https://github.com/example/neuroflow#readme"
+"Repository" = "https://github.com/example/neuroflow.git"
+"Issues" = "https://github.com/example/neuroflow/issues"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
+include = '\.pyi?$'
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "W"]
+ignore = ["E501"]  # Line length; handled by black
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = "smoke_*.py test_*.py *_test.py"
+addopts = "-v --tb=short"
+

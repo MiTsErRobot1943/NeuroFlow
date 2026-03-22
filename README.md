@@ -1,51 +1,96 @@
-# NeuroFlow Docker Setup
+# NeuroFlow
 
-This project runs with Docker Compose using Flask, Ollama (with `mistral`), Nginx, local SQLite auth storage, and a separate PostgreSQL + pgvector analytics database.
+NeuroFlow supports both:
 
-## Services
+- **Web mode**: Flask/Gunicorn for browser or Docker deployment.
+- **Desktop mode**: embedded desktop app with `pywebview` on top of the same Flask backend.
 
-- `nginx`: Public web server exposed on port `80`
-- `flask`: Python app served by Gunicorn
-- `ollama`: Local LLM runtime
-- `ollama-pull`: One-time job that pulls the `mistral` model
-- `analytics-db`: `pgvector/pgvector:pg16` for user activity analytics and vector-ready deep-learning inputs
+The app now uses an app-factory pattern (`src/app_factory.py`) so startup initialization is explicit per runtime mode.
 
-All services run on the same Docker network (`neuroflow_net`).
+## Runtime Modes
 
-## Quick Start
+- `dev`: local development defaults.
+- `web`: container/server deployment defaults.
+- `desktop`: local desktop app with per-user app data storage.
 
-```bash
+Mode selection is controlled by `NEUROFLOW_MODE` (or launcher scripts).
+
+## Local Setup (PowerShell)
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Create the auth DB and first user:
+
+```powershell
+python db_setup.py --create-user your_username
+```
+
+## Run Locally
+
+Web mode:
+
+```powershell
+python run_web.py --mode dev
+```
+
+Desktop mode:
+
+```powershell
+python run_desktop.py
+```
+
+Desktop backend smoke check (no GUI window):
+
+```powershell
+python run_desktop.py --no-window
+```
+
+## Smoke Tests
+
+```powershell
+python smoke_auth_test.py
+python smoke_desktop_startup_test.py
+```
+
+## Docker Compose
+
+This project runs with Docker Compose using Flask, Ollama (`mistral`), Nginx, local SQLite auth storage, and a separate PostgreSQL + pgvector analytics database.
+
+```powershell
 docker compose up --build
 ```
 
 After startup:
 
 - App URL: `http://localhost`
-- Ollama endpoint in the network: `http://ollama:11434`
-- SQLite DB file location inside containers: `/data/neuroflow.db`
-- Analytics DB endpoint in the network: `analytics-db:5432`
+- Ollama endpoint in-network: `http://ollama:11434`
+- SQLite DB file inside containers: `/data/neuroflow.db`
+- Analytics DB endpoint in-network: `analytics-db:5432`
 
-## Local Auth Database Setup
+Stop services:
 
-The login system uses SQLite with parameterized SQL queries (`?` placeholders) to prevent SQL injection, and Jinja auto-escaping + CSP headers to reduce XSS risk.
-
-Initialize the schema and create your first user:
-
-```bash
-python db_setup.py --create-user your_username
-```
-
-Then start the app and log in at `/login`.
-
-## Stop
-
-```bash
+```powershell
 docker compose down
 ```
 
-To remove volumes too:
+Remove volumes too:
 
-```bash
+```powershell
 docker compose down -v
 ```
+
+## Windows Packaging (PyInstaller)
+
+Use the helper script to build a desktop executable:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1
+```
+
+Build output is written to `dist\NeuroFlowDesktop\`.
 

@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: neuroflow-flask
     restart: unless-stopped
-    command: gunicorn --bind 0.0.0.0:5000 app:app
+    command: gunicorn --bind 0.0.0.0:5000 "app:create_app(mode='web', init_db=True)"
     environment:
       FLASK_ENV: production
       OLLAMA_BASE_URL: http://ollama:11434
