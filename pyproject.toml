@@ -41,7 +41,7 @@ dev = [
 "Issues" = "https://github.com/example/neuroflow/issues"
 
 [tool.setuptools]
-packages = ["src", "src.services"]
+packages = ["src"]
 
 [tool.black]
 line-length = 100
