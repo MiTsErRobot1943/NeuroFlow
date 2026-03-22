@@ -5,7 +5,6 @@ Starts Flask development server or production-ready configuration per runtime mo
 """
 
 import argparse
-import logging
 import sys
 
 from src.app_factory import create_app
