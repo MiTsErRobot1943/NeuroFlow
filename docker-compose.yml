@@ -10,14 +10,15 @@ services:
       FLASK_ENV: production
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: mistral
-      SQLITE_DB_PATH: /data/neuroflow.db
+      NEUROFLOW_DB_PATH: /data/neuroflow.db
+      ANALYTICS_DATABASE_URL: postgresql://neuroflow:neuroflow@analytics-db:5432/neuroflow_analytics
     volumes:
       - sqlite_data:/data
     depends_on:
       ollama-pull:
         condition: service_completed_successfully
-      sqlite:
-        condition: service_started
+      analytics-db:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -77,12 +78,22 @@ services:
     networks:
       - neuroflow_net
 
-  sqlite:
-    image: keinos/sqlite3:latest
-    container_name: neuroflow-sqlite
-    command: ["sleep", "infinity"]
+  analytics-db:
+    image: pgvector/pgvector:pg16
+    container_name: neuroflow-analytics-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: neuroflow_analytics
+      POSTGRES_USER: neuroflow
+      POSTGRES_PASSWORD: neuroflow
     volumes:
-      - sqlite_data:/data
+      - analytics_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neuroflow -d neuroflow_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - neuroflow_net
 
@@ -93,4 +104,5 @@ networks:
 volumes:
   sqlite_data:
   ollama_data:
+  analytics_db_data:
 

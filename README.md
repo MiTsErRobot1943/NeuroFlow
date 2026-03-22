@@ -1,6 +1,6 @@
 # NeuroFlow Docker Setup
 
-This project runs with Docker Compose using Flask, Ollama (with `mistral`), Nginx, and a shared SQLite volume.
+This project runs with Docker Compose using Flask, Ollama (with `mistral`), Nginx, local SQLite auth storage, and a separate PostgreSQL + pgvector analytics database.
 
 ## Services
 
@@ -8,7 +8,7 @@ This project runs with Docker Compose using Flask, Ollama (with `mistral`), Ngin
 - `flask`: Python app served by Gunicorn
 - `ollama`: Local LLM runtime
 - `ollama-pull`: One-time job that pulls the `mistral` model
-- `sqlite`: Utility container with shared database volume
+- `analytics-db`: `pgvector/pgvector:pg16` for user activity analytics and vector-ready deep-learning inputs
 
 All services run on the same Docker network (`neuroflow_net`).
 
@@ -23,6 +23,7 @@ After startup:
 - App URL: `http://localhost`
 - Ollama endpoint in the network: `http://ollama:11434`
 - SQLite DB file location inside containers: `/data/neuroflow.db`
+- Analytics DB endpoint in the network: `analytics-db:5432`
 
 ## Local Auth Database Setup
 
