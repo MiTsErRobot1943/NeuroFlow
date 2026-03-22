@@ -130,12 +130,14 @@ def wait_for_backend(url: str, timeout_seconds: float = 10.0) -> None:
 
     while time.time() < deadline:
         try:
-            with urlopen(url, timeout=HTTP_TIMEOUT):
-                logger.info("Backend ready")
-                return
-        except (URLError, Exception) as exc:
+            with urlopen(url, timeout=HTTP_TIMEOUT) as response:
+                if response.status == HTTP_RESPONSE_OK:
+                    logger.info("Backend ready")
+                    return
+                logger.debug(f"Backend returned unexpected status {response.status}, retrying")
+        except URLError as exc:
             logger.debug(f"Backend not ready yet: {exc}")
-            time.sleep(BACKEND_READY_CHECK_INTERVAL)
+        time.sleep(BACKEND_READY_CHECK_INTERVAL)
 
     raise TimeoutError(f"Backend did not become ready: {url}")
 
