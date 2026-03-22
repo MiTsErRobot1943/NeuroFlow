@@ -136,9 +136,9 @@ def register_routes(app: Flask) -> None:
                 session["username"] = user["username"]
                 session["csrf_token"] = secrets.token_urlsafe(CSRF_TOKEN_LENGTH)
                 return redirect(url_for("dashboard"))
-
+            else:
                 logger.warning(f"Failed login attempt for username: {username}")
-            flash("Invalid username or password.", "error")
+                flash("Invalid username or password.", "error")
 
         return render_template("Login.html", csrf_token=_ensure_csrf_token())
 
