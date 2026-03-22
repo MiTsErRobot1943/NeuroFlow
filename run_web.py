@@ -40,9 +40,6 @@ def main() -> None:
         logger.error(f"Failed to create Flask app: {exc}", exc_info=True)
         sys.exit(1)
 
-    runtime = load_runtime_config(args.mode)
-    app = create_app(mode=args.mode, init_db=True)
-
     host = args.host or runtime.host
     port = args.port or runtime.port
     logger.info(f"Starting web server at {host}:{port} (debug={runtime.debug})")
