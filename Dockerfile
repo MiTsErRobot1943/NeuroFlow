@@ -13,5 +13,5 @@ RUN mkdir -p /data
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app(mode='web', init_db=True)"]
 

@@ -1,0 +1,45 @@
+I’m building NeuroFlow as a Python desktop/web hybrid.
+Please implement desktop application functionality on top of my existing Flask project without breaking the current web app behavior.
+
+Current project context:
+- Flask app entry: `app.py`
+- Templates are in `Template/` (e.g., `Template/Dashboard.html`, `Template/Login.html`)
+- Static assets are in `Template/css/style.css` and `Template/js/APP.js`
+- Auth and DB setup currently exist (SQLite + login flow + CSRF + sessions)
+- I want to keep the web deployment path intact, and add desktop mode cleanly.
+
+What I want you to build:
+1) Add desktop launcher support using Python (prefer `pywebview`) so the app can run as:
+   - Web mode: regular Flask server/browser
+   - Desktop mode: embedded desktop window using localhost Flask backend
+2) Refactor into a clean structure (app factory pattern) where possible:
+   - Move side effects out of import-time code
+   - Add explicit startup initialization
+3) Add desktop-safe config:
+   - App data directory for SQLite on desktop
+   - Environment-based config (`dev`, `web`, `desktop`)
+4) Preserve current authentication and security controls:
+   - Keep SQL injection protections and CSRF/session behavior
+   - Do not weaken current XSS protections
+5) Keep existing UI and sidebar behavior working in both modes.
+6) Provide packaging guidance for Windows (PyInstaller), with a minimal build script.
+
+Implementation requirements:
+- Make concrete code changes directly in the project files.
+- If you add files, include all file contents.
+- Keep code readable and maintainable.
+- Add concise comments only where needed.
+- Do not remove existing functionality unless you replace it with an equivalent/better version.
+- If multiple options exist, choose the most practical one and explain why briefly.
+
+Validation requirements:
+- Run tests/smoke checks after changes.
+- Add/adjust at least one desktop startup smoke test or minimal runner validation.
+- Show exact commands to run in PowerShell.
+
+Output format:
+1) Quick summary of what was implemented
+2) Files changed with purpose
+3) Key code snippets (before/after for critical changes)
+4) Commands to run locally (web mode + desktop mode)
+5) Any follow-up improvements (short prioritized list)

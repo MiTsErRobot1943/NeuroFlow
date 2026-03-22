@@ -1,7 +1,16 @@
-Flask>=3.0,<4.0
-gunicorn>=22.0,<23.0
-langchain>=0.3,<0.4
-langchain-community>=0.3,<0.4
-langchain-ollama>=0.2,<0.3
-ollama>=0.6,<0.7
+# ========== Web Framework ==========
+Flask>=3.0,<4.0                           # Web application framework
+gunicorn>=22.0,<23.0                      # Production WSGI HTTP server
 
+# ========== Security ==========
+Werkzeug>=3.0,<4.0                        # WSGI toolkit (password hashing, security)
+
+# ========== Desktop Application ==========
+pywebview>=5.0,<6.0                       # Desktop window wrapper around Flask backend
+pyinstaller>=6.0,<7.0                     # Bundle Python app into Windows executable
+
+# ========== LLM & AI ==========
+langchain>=0.3,<0.4                       # LLM orchestration framework
+langchain-community>=0.3,<0.4             # Community integrations for LangChain
+langchain-ollama>=0.2,<0.3                # Ollama integration for LangChain
+ollama>=0.6,<0.7                          # Ollama Python client library
