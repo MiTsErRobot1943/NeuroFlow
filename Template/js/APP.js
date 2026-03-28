@@ -184,8 +184,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const recentTaskList = document.getElementById('task-list');
   const projectTemplateButtons = Array.from(document.querySelectorAll('.project-template-btn'));
   const openProjectConfigBtn = document.getElementById('open-project-config-btn');
-  const projectConfigSection = document.getElementById('project-config-section');
+  const projectConfigModal = document.getElementById('project-config-modal');
   const projectConfigForm = document.getElementById('project-config-form');
+  const projectConfigSteps = Array.from(document.querySelectorAll('.project-config-step'));
+  const projectConfigStepCounter = document.getElementById('project-config-step-counter');
+  const projectTypeInput = document.getElementById('project-type');
+  const languageFrameworkInput = document.getElementById('language-framework');
+
+  const languageFrameworkOptionsByType = {
+    web: ['JavaScript + React', 'TypeScript + Next.js', 'Python + Flask', 'Python + Django'],
+    desktop: ['Python + PyWebView', 'Python + PyQt', 'C# + .NET WPF', 'Java + JavaFX'],
+    mobile: ['Dart + Flutter', 'Kotlin + Android', 'Swift + SwiftUI', 'React Native'],
+    data: ['Python + Pandas', 'Python + PyTorch', 'Python + TensorFlow', 'R + Tidyverse'],
+    backend: ['Python + FastAPI', 'Python + Flask', 'Node.js + Express', 'Go + Gin']
+  };
+
+  let projectConfigStepIndex = 0;
+  let latestProjectConfig = null;
 
   const chatbotPanels = Array.from(document.querySelectorAll('.chatbot-panel'));
 
@@ -374,6 +389,105 @@ document.addEventListener('DOMContentLoaded', () => {
     pendingSubtasks.push({ id: generateId('draft-subtask'), title });
     newSubtaskTitleInput.value = '';
     renderDraftSubtasks();
+  }
+
+  function refreshLanguageFrameworkOptions() {
+    if (!(projectTypeInput instanceof HTMLSelectElement) || !(languageFrameworkInput instanceof HTMLSelectElement)) {
+      return;
+    }
+
+    const selectedType = projectTypeInput.value || 'web';
+    const options = languageFrameworkOptionsByType[selectedType] || languageFrameworkOptionsByType.web;
+    const previousValue = languageFrameworkInput.value;
+
+    languageFrameworkInput.innerHTML = options
+      .map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`)
+      .join('');
+
+    if (options.includes(previousValue)) {
+      languageFrameworkInput.value = previousValue;
+    }
+  }
+
+  function showProjectConfigStep(stepIndex) {
+    if (!projectConfigSteps.length) return;
+
+    const boundedIndex = Math.max(0, Math.min(stepIndex, projectConfigSteps.length - 1));
+    projectConfigStepIndex = boundedIndex;
+
+    projectConfigSteps.forEach((step, index) => {
+      step.hidden = index !== boundedIndex;
+    });
+
+    if (projectConfigStepCounter) {
+      projectConfigStepCounter.textContent = `Question ${boundedIndex + 1} of ${projectConfigSteps.length}`;
+    }
+  }
+
+  function closeProjectConfigModal() {
+    if (!projectConfigModal) return;
+    projectConfigModal.classList.remove('is-open');
+    projectConfigModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (openProjectConfigBtn instanceof HTMLElement) {
+      openProjectConfigBtn.focus();
+    }
+  }
+
+  function openProjectConfigModal() {
+    if (!projectConfigModal) return;
+    refreshLanguageFrameworkOptions();
+    showProjectConfigStep(0);
+    projectConfigModal.classList.add('is-open');
+    projectConfigModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+
+    const firstInput = projectConfigSteps[0]?.querySelector('.task-input');
+    if (firstInput instanceof HTMLElement) {
+      firstInput.focus();
+    }
+  }
+
+  function validateCurrentProjectStep() {
+    const step = projectConfigSteps[projectConfigStepIndex];
+    if (!step) return true;
+    const input = step.querySelector('.task-input');
+    if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement || input instanceof HTMLTextAreaElement) {
+      return input.reportValidity();
+    }
+    return true;
+  }
+
+  function getProjectConfigPayload() {
+    const experienceLevel = String(document.getElementById('experience-level')?.value || 'beginner');
+    return {
+      project_name: String(document.getElementById('project-name')?.value || '').trim(),
+      project_type: String(document.getElementById('project-type')?.value || 'web'),
+      experience_level: experienceLevel,
+      language_framework: String(document.getElementById('language-framework')?.value || '').trim(),
+      time_management_style: String(document.getElementById('time-management-style')?.value || 'structured'),
+      memory_style: String(document.getElementById('memory-style')?.value || 'mixed'),
+      notes: String(document.getElementById('project-config-notes')?.value || '').trim(),
+      web_experience: experienceLevel,
+      desktop_experience: experienceLevel,
+      architecture_experience: experienceLevel,
+      database_experience: experienceLevel
+    };
+  }
+
+  function getChatbotProfilePayload() {
+    const baseline = latestProjectConfig || getProjectConfigPayload();
+    const experienceLevel = baseline.experience_level || 'beginner';
+    return {
+      web_experience: experienceLevel,
+      desktop_experience: experienceLevel,
+      architecture_experience: experienceLevel,
+      database_experience: experienceLevel,
+      project_type: baseline.project_type || 'web',
+      language_framework: baseline.language_framework || '',
+      time_management_style: baseline.time_management_style || 'structured',
+      memory_style: baseline.memory_style || 'mixed'
+    };
   }
 
   if (addSubtaskBtn) {
@@ -574,32 +688,66 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  if (openProjectConfigBtn && projectConfigSection) {
-    openProjectConfigBtn.addEventListener('click', () => {
-      projectConfigSection.hidden = false;
-      projectConfigSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (projectTypeInput) {
+    projectTypeInput.addEventListener('change', refreshLanguageFrameworkOptions);
+  }
+
+  if (openProjectConfigBtn && projectConfigModal) {
+    openProjectConfigBtn.addEventListener('click', openProjectConfigModal);
+  }
+
+  if (projectConfigModal) {
+    projectConfigModal.addEventListener('click', event => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const closeTrigger = target.closest('[data-action="close-project-config-modal"]');
+      if (!closeTrigger) return;
+      closeProjectConfigModal();
+    });
+  }
+
+  // Handle Escape key to close modal when it is open.
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !projectConfigModal) return;
+    if (!projectConfigModal.classList.contains('is-open')) return;
+    event.preventDefault();
+    closeProjectConfigModal();
+  });
+
+  if (projectConfigForm) {
+    projectConfigForm.addEventListener('click', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.dataset.action !== 'next-project-config-step') return;
+
+      if (!validateCurrentProjectStep()) return;
+      if (projectConfigStepIndex === 1) {
+        refreshLanguageFrameworkOptions();
+      }
+      showProjectConfigStep(projectConfigStepIndex + 1);
+      const nextInput = projectConfigSteps[projectConfigStepIndex]?.querySelector('.task-input');
+      if (nextInput instanceof HTMLElement) {
+        nextInput.focus();
+      }
     });
   }
 
   if (projectConfigForm) {
     projectConfigForm.addEventListener('submit', async event => {
       event.preventDefault();
-
-      const payload = {
-        project_name: String(document.getElementById('project-name')?.value || '').trim(),
-        web_experience: String(document.getElementById('experience-web')?.value || 'beginner'),
-        desktop_experience: String(document.getElementById('experience-desktop')?.value || 'beginner'),
-        architecture_experience: String(document.getElementById('experience-architecture')?.value || 'beginner'),
-        database_experience: String(document.getElementById('experience-database')?.value || 'beginner'),
-        notes: String(document.getElementById('project-config-notes')?.value || '').trim()
-      };
+      if (!validateCurrentProjectStep()) return;
+      const payload = getProjectConfigPayload();
 
       try {
         await apiFetch('/api/projects/configure', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
+        latestProjectConfig = payload;
         projectConfigForm.reset();
+        refreshLanguageFrameworkOptions();
+        closeProjectConfigModal();
+        showProjectConfigStep(0);
         await refreshTaskData();
       } catch (error) {
         window.alert(error.message);
@@ -623,12 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
     try {
-      const profilePayload = {
-        web_experience: String(document.getElementById('experience-web')?.value || 'beginner'),
-        desktop_experience: String(document.getElementById('experience-desktop')?.value || 'beginner'),
-        architecture_experience: String(document.getElementById('experience-architecture')?.value || 'beginner'),
-        database_experience: String(document.getElementById('experience-database')?.value || 'beginner')
-      };
+      const profilePayload = getChatbotProfilePayload();
 
       const payload = await apiFetch('/api/chatbot', {
         method: 'POST',

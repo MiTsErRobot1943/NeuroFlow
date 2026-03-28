@@ -343,10 +343,25 @@ def list_chat_history(user_id: int, db_path: str, limit: int = 30) -> list[dict[
 def save_project_profile(user_id: int, payload: dict[str, str], db_path: str) -> dict[str, Any]:
     project_name = (payload.get("project_name") or "Untitled Project").strip()
     notes = (payload.get("notes") or "").strip()
-    web_exp = (payload.get("web_experience") or "beginner").strip()
-    desktop_exp = (payload.get("desktop_experience") or "beginner").strip()
-    architecture_exp = (payload.get("architecture_experience") or "beginner").strip()
-    db_exp = (payload.get("database_experience") or "beginner").strip()
+    project_type = (payload.get("project_type") or "web").strip()
+    experience_level = (payload.get("experience_level") or payload.get("web_experience") or "beginner").strip()
+    language_framework = (payload.get("language_framework") or "").strip()
+    time_management_style = (payload.get("time_management_style") or "structured").strip()
+    memory_style = (payload.get("memory_style") or "mixed").strip()
+
+    web_exp = (payload.get("web_experience") or experience_level).strip()
+    desktop_exp = (payload.get("desktop_experience") or experience_level).strip()
+    architecture_exp = (payload.get("architecture_experience") or experience_level).strip()
+    db_exp = (payload.get("database_experience") or experience_level).strip()
+
+    planner_metadata = (
+        f"project_type={project_type}; "
+        f"experience_level={experience_level}; "
+        f"language_framework={language_framework}; "
+        f"time_management_style={time_management_style}; "
+        f"memory_style={memory_style}"
+    )
+    stored_notes = f"{notes}\n\nPlanner metadata: {planner_metadata}".strip()
 
     conn = _connect(db_path)
     try:
@@ -363,17 +378,23 @@ def save_project_profile(user_id: int, payload: dict[str, str], db_path: str) ->
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, project_name, web_exp, desktop_exp, architecture_exp, db_exp, notes),
+            (user_id, project_name, web_exp, desktop_exp, architecture_exp, db_exp, stored_notes),
         )
         conn.commit()
         return {
             "id": cursor.lastrowid,
             "project_name": project_name,
+            "project_type": project_type,
+            "experience_level": experience_level,
+            "language_framework": language_framework,
+            "time_management_style": time_management_style,
+            "memory_style": memory_style,
             "web_experience": web_exp,
             "desktop_experience": desktop_exp,
             "architecture_experience": architecture_exp,
             "database_experience": db_exp,
             "notes": notes,
+            "stored_notes": stored_notes,
         }
     finally:
         conn.close()

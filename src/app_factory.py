@@ -19,7 +19,9 @@ from src.constants import (
 )
 from src.logging_config import setup_logger
 from src.services.analytics_store import initialize_analytics_database
+from src.services.analytics_store import list_recent_projects
 from src.services.analytics_store import track_event
+from src.services.chatbot import generate_project_plan
 from src.services.chatbot import generate_response
 from src.services.db_setup import initialize_database, verify_user
 from src.services.task_store import add_subtask
@@ -470,6 +472,13 @@ def register_routes(app: Flask) -> None:
                 )
             )
 
+        track_event(
+            app.config.get("ANALYTICS_DATABASE_URL"),
+            "predefined_project_generated",
+            session.get("username", "user"),
+            {"template": template_name, "project_name": list_name, "task_count": len(created_tasks)},
+        )
+
         return jsonify({"ok": True, "list": selected_list, "created_tasks": created_tasks})
 
     @app.route("/api/projects/configure", methods=["POST"])
@@ -482,60 +491,56 @@ def register_routes(app: Flask) -> None:
 
         payload = request.get_json(silent=True) or {}
         profile = save_project_profile(user_id, payload, app.config["NEUROFLOW_DB_PATH"])
+        username = session.get("username", "user")
+        past_projects = list_recent_projects(
+            app.config.get("ANALYTICS_DATABASE_URL"),
+            username,
+            limit=6,
+        )
+
+        generated_plan = generate_project_plan(profile, past_projects)
 
         db_path = app.config["NEUROFLOW_DB_PATH"]
-        selected_list = create_task_list(user_id, profile["project_name"], db_path)
+        selected_list = create_task_list(user_id, generated_plan.get("list_name", profile["project_name"]), db_path)
 
-        experience_to_scope = {
-            "beginner": "Foundational setup and guided implementation",
-            "intermediate": "Balanced implementation with moderate refactoring",
-            "advanced": "Architecture-first implementation and optimization",
-        }
+        created_tasks = []
+        for item in generated_plan.get("tasks", []):
+            raw_subtasks = item.get("subtasks", []) if isinstance(item, dict) else []
+            if not isinstance(raw_subtasks, list):
+                raw_subtasks = []
 
-        created_tasks = [
-            create_task(
-                user_id=user_id,
-                title="Define project scope and milestones",
-                list_id=int(selected_list["id"]),
-                notes=(
-                    f"Web: {profile['web_experience']}, Desktop: {profile['desktop_experience']}, "
-                    f"Architecture: {profile['architecture_experience']}, Database: {profile['database_experience']}"
-                ),
-                subtasks=[
-                    "Document problem statement",
-                    "Define acceptance criteria",
-                    "Publish milestone timeline",
-                ],
-                db_path=db_path,
-                source="project-config",
-            ),
-            create_task(
-                user_id=user_id,
-                title="Implement core build plan",
-                list_id=int(selected_list["id"]),
-                notes=experience_to_scope.get(profile["architecture_experience"], "Balanced implementation"),
-                subtasks=[
-                    "Implement first vertical slice",
-                    "Review architecture decisions",
-                    "Harden tests and monitoring",
-                ],
-                db_path=db_path,
-                source="project-config",
-            ),
-            create_task(
-                user_id=user_id,
-                title="Ship analytics and reporting",
-                list_id=int(selected_list["id"]),
-                notes="Track progress and usage metrics for continuous improvement.",
-                subtasks=[
-                    "Capture completion analytics",
-                    "Create weekly progress report",
-                    "Review learnings and iterate",
-                ],
-                db_path=db_path,
-                source="project-config",
-            ),
-        ]
+            created_tasks.append(
+                create_task(
+                    user_id=user_id,
+                    title=str(item.get("title", "")).strip() or "Plan milestone",
+                    list_id=int(selected_list["id"]),
+                    notes=str(item.get("notes", "")).strip(),
+                    subtasks=[str(sub) for sub in raw_subtasks if str(sub).strip()],
+                    db_path=db_path,
+                    source="project-config-ai",
+                )
+            )
 
-        return jsonify({"ok": True, "profile": profile, "list": selected_list, "created_tasks": created_tasks})
+        track_event(
+            app.config.get("ANALYTICS_DATABASE_URL"),
+            "project_configured",
+            username,
+            {
+                "project_name": profile.get("project_name", ""),
+                "project_type": profile.get("project_type", ""),
+                "experience_level": profile.get("experience_level", ""),
+                "language_framework": profile.get("language_framework", ""),
+                "task_count": len(created_tasks),
+            },
+        )
+
+        return jsonify(
+            {
+                "ok": True,
+                "profile": profile,
+                "past_projects": past_projects,
+                "list": selected_list,
+                "created_tasks": created_tasks,
+            }
+        )
 

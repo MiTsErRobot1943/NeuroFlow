@@ -304,48 +304,79 @@
         </div>
       </section>
 
-      <section class="level-card" id="project-config-section" aria-labelledby="project-config-heading" hidden>
-        <div class="tasks-section__header">
-          <h2 id="project-config-heading" class="section-title">Configure Project</h2>
-        </div>
-        <form id="project-config-form" class="task-form" autocomplete="off">
-          <label for="project-name" class="task-form__label">Project Name</label>
-          <input id="project-name" name="project-name" class="task-input" type="text" maxlength="120" placeholder="e.g. Honors Platform v2" required />
+      <div id="project-config-modal" class="project-config-modal" role="dialog" aria-modal="true" aria-labelledby="project-config-modal-title" aria-hidden="true">
+        <div class="project-config-modal__backdrop" data-action="close-project-config-modal"></div>
+        <section class="level-card project-config-modal__panel" aria-describedby="project-config-step-counter">
+          <div class="tasks-section__header">
+            <h2 id="project-config-modal-title" class="section-title">Configure Project</h2>
+            <button type="button" class="task-action-btn" data-action="close-project-config-modal">Close</button>
+          </div>
+          <p id="project-config-step-counter" class="page-subtitle">Question 1 of 7</p>
 
-          <label for="experience-web" class="task-form__label">Web development experience</label>
-          <select id="experience-web" class="task-input" required>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+          <form id="project-config-form" class="task-form" autocomplete="off">
+            <section class="project-config-step" data-step-index="0">
+              <label for="project-name" class="task-form__label">What is your project called?</label>
+              <input id="project-name" name="project-name" class="task-input" type="text" maxlength="120" placeholder="e.g. Honors Platform v2" required />
+              <button type="button" class="btn btn--primary" data-action="next-project-config-step">Next</button>
+            </section>
 
-          <label for="experience-desktop" class="task-form__label">Desktop application experience</label>
-          <select id="experience-desktop" class="task-input" required>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+            <section class="project-config-step" data-step-index="1" hidden>
+              <label for="project-type" class="task-form__label">What type of project are you building?</label>
+              <select id="project-type" class="task-input" required>
+                <option value="web">Web application</option>
+                <option value="desktop">Desktop application</option>
+                <option value="mobile">Mobile application</option>
+                <option value="data">Data / AI workflow</option>
+                <option value="backend">Backend API service</option>
+              </select>
+              <button type="button" class="btn btn--primary" data-action="next-project-config-step">Next</button>
+            </section>
 
-          <label for="experience-architecture" class="task-form__label">Software architecture experience</label>
-          <select id="experience-architecture" class="task-input" required>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+            <section class="project-config-step" data-step-index="2" hidden>
+              <label for="experience-level" class="task-form__label">How would you describe your experience level?</label>
+              <select id="experience-level" class="task-input" required>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+              <button type="button" class="btn btn--primary" data-action="next-project-config-step">Next</button>
+            </section>
 
-          <label for="experience-database" class="task-form__label">Database design experience</label>
-          <select id="experience-database" class="task-input" required>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+            <section class="project-config-step" data-step-index="3" hidden>
+              <label for="language-framework" class="task-form__label">What language/framework do you want to use?</label>
+              <select id="language-framework" class="task-input" required></select>
+              <button type="button" class="btn btn--primary" data-action="next-project-config-step">Next</button>
+            </section>
 
-          <label for="project-config-notes" class="task-form__label">Additional context</label>
-          <textarea id="project-config-notes" class="task-input task-textarea" rows="3" maxlength="400" placeholder="Anything the planner should prioritize?"></textarea>
+            <section class="project-config-step" data-step-index="4" hidden>
+              <label for="time-management-style" class="task-form__label">How do you usually manage your time?</label>
+              <select id="time-management-style" class="task-input" required>
+                <option value="structured">Structured schedule with fixed blocks</option>
+                <option value="flexible">Flexible schedule with daily priorities</option>
+                <option value="deadline-driven">Mostly deadline-driven bursts</option>
+              </select>
+              <button type="button" class="btn btn--primary" data-action="next-project-config-step">Next</button>
+            </section>
 
-          <button type="submit" class="btn btn--primary">Generate Individual Tasks</button>
-        </form>
-      </section>
+            <section class="project-config-step" data-step-index="5" hidden>
+              <label for="memory-style" class="task-form__label">How do you retain technical details best?</label>
+              <select id="memory-style" class="task-input" required>
+                <option value="visual">Visual maps and diagrams</option>
+                <option value="written">Written notes and checklists</option>
+                <option value="hands-on">Hands-on coding and repetition</option>
+                <option value="mixed">A mix of all styles</option>
+              </select>
+              <button type="button" class="btn btn--primary" data-action="next-project-config-step">Next</button>
+            </section>
+
+            <section class="project-config-step" data-step-index="6" hidden>
+              <label for="project-config-notes" class="task-form__label">Any extra context to personalize your layout?</label>
+              <textarea id="project-config-notes" class="task-input task-textarea" rows="3" maxlength="400" placeholder="Optional: constraints, deadlines, collaboration details"></textarea>
+              <button type="submit" class="btn btn--primary">Generate Best Layout</button>
+            </section>
+          </form>
+        </section>
+      </div>
 
       <section class="level-card chatbot-panel" data-chatbot-scope="tasks" aria-labelledby="chatbot-tasks-heading">
         <div class="tasks-section__header">
