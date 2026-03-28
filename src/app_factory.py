@@ -100,6 +100,11 @@ def _validate_csrf() -> bool:
 
 def register_routes(app: Flask) -> None:
     """Register Flask route handlers."""
+    @app.route("/health", methods=["GET"])
+    def health() -> tuple[dict[str, str], int]:
+        """Container liveness/readiness endpoint."""
+        return {"status": "ok"}, 200
+
     @app.route("/")
     def dashboard():
         """Dashboard view (protected by login)."""

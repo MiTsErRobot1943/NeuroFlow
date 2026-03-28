@@ -225,14 +225,62 @@
       <header class="page-header">
         <div>
           <h1 class="page-title">New Task</h1>
-          <p class="page-subtitle">Add your next step and keep your streak alive.</p>
+          <p class="page-subtitle">Create lists, build tasks, and break work into subtasks.</p>
         </div>
       </header>
 
-      <div class="level-card">
-        <p class="level-card__title">Task creator coming soon</p>
-        <p class="level-card__sub">Use this placeholder page for now while task form logic is wired up.</p>
+      <div class="task-builder-grid">
+        <section class="level-card task-builder-card" aria-labelledby="list-creator-heading">
+          <h2 id="list-creator-heading" class="section-title">Task Lists</h2>
+          <p class="page-subtitle">Use lists to group tasks by project, class, or goal.</p>
+
+          <form id="create-list-form" class="task-form task-form--compact" autocomplete="off">
+            <label for="new-list-name" class="task-form__label">New list name</label>
+            <div class="task-inline-row">
+              <input id="new-list-name" name="new-list-name" class="task-input" type="text" maxlength="40" placeholder="e.g. Dissertation" required />
+              <button type="submit" class="btn btn--primary">Create List</button>
+            </div>
+          </form>
+
+          <div id="task-lists" class="list-chip-wrap" role="list" aria-label="Available task lists"></div>
+        </section>
+
+        <section class="level-card task-builder-card" aria-labelledby="task-creator-heading">
+          <h2 id="task-creator-heading" class="section-title">Create Task</h2>
+          <p class="page-subtitle">Add a task and optional subtasks.</p>
+
+          <form id="create-task-form" class="task-form" autocomplete="off">
+            <label for="task-title" class="task-form__label">Task title</label>
+            <input id="task-title" name="task-title" class="task-input" type="text" maxlength="120" placeholder="e.g. Write section 2.4" required />
+
+            <label for="task-list-select" class="task-form__label">List</label>
+            <select id="task-list-select" name="task-list-select" class="task-input" required></select>
+
+            <label for="task-notes" class="task-form__label">Notes (optional)</label>
+            <textarea id="task-notes" name="task-notes" class="task-input task-textarea" rows="3" maxlength="300" placeholder="Short context or reminder"></textarea>
+
+            <div class="task-subtask-builder" aria-labelledby="subtasks-heading">
+              <p id="subtasks-heading" class="task-form__label">Subtasks</p>
+              <label for="new-subtask-title" class="task-form__label">Add subtask to draft</label>
+              <div class="task-inline-row">
+                <input id="new-subtask-title" name="new-subtask-title" class="task-input" type="text" maxlength="120" placeholder="e.g. Gather 3 references" />
+                <button type="button" id="add-subtask-btn" class="btn">Add Subtask</button>
+              </div>
+              <ul id="new-subtask-list" class="subtask-draft-list" aria-live="polite"></ul>
+            </div>
+
+            <button type="submit" class="btn btn--primary task-submit-btn">Create Task</button>
+          </form>
+        </section>
       </div>
+
+      <section class="level-card" aria-labelledby="all-tasks-heading">
+        <div class="tasks-section__header">
+          <h2 id="all-tasks-heading" class="section-title">All Tasks</h2>
+        </div>
+        <div id="tasks-empty-state" class="task-empty" hidden>No tasks yet. Create one to get started.</div>
+        <ul id="task-board" class="task-list" role="list"></ul>
+      </section>
     </section>
 
     <section class="screen" id="screen-profile" aria-label="Profile" hidden>
