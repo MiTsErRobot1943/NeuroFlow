@@ -21,15 +21,6 @@ def _resolve_db_path(db_path: Optional[str] = None, mode: Optional[str] = None) 
     if configured:
         return Path(configured)
 
-    resolved_mode = (mode or os.getenv("NEUROFLOW_MODE") or "dev").strip().lower()
-    if resolved_mode == "desktop":
-        appdata = os.getenv("APPDATA")
-        if appdata:
-            return Path(appdata) / "NeuroFlow" / "data" / "neuroflow.db"
-
-        local_appdata = os.getenv("LOCALAPPDATA")
-        if local_appdata:
-            return Path(local_appdata) / "NeuroFlow" / "data" / "neuroflow.db"
 
     return DEFAULT_DB_PATH
 

@@ -4,18 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="Amended the project layout to follow SE principles + added local desktop functionality">
-      <change afterPath="$PROJECT_DIR$/src/services/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/services/db_setup.py" afterDir="false" />
+    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="Set-up Task-creation functionality">
+      <change afterPath="$PROJECT_DIR$/src/services/analytics_store.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/services/chatbot.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/services/task_store.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Template/Dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/Template/Dashboard.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Template/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/Template/css/style.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Template/js/APP.js" beforeDir="false" afterPath="$PROJECT_DIR$/Template/js/APP.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/db_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/run_desktop.py" beforeDir="false" afterPath="$PROJECT_DIR$/run_desktop.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/schema.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/app_factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,28 +94,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "DefaultHtmlFileTemplate": "HTML File",
-    "Docker.Dockerfile.executor": "Run",
-    "Docker.docker-compose.yaml: Compose Deployment.executor": "Run",
-    "Docker.docker-compose.yml: Compose Deployment.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.app.executor": "Run",
-    "Python.run_desktop.executor": "Run",
-    "Python.run_web.executor": "Debug",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "Development/feature-AIpipline",
-    "last_opened_file_path": "C:/Users/blair/OneDrive/Documents/Software Engineering Honor project/NeuroFlow"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;Docker.Dockerfile.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yaml: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yml: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.app.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run_desktop.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run_web.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Development/feature-AIpipline&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/blair/OneDrive/Documents/Software Engineering Honor project/NeuroFlow&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\blair\OneDrive\Documents\Software Engineering Honor project\NeuroFlow" />
@@ -205,7 +207,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774125123991</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Set-up Task-creation functionality">
+      <option name="closed" value="true" />
+      <created>1774705543484</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1774705543484</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -235,7 +245,8 @@
     <MESSAGE value="initial commit - set-up environment and basic dashboard" />
     <MESSAGE value="basic login functionality set-up" />
     <MESSAGE value="improved architecture layout of docker containers, added in analytics database" />
-    <option name="LAST_COMMIT_MESSAGE" value="improved architecture layout of docker containers, added in analytics database" />
+    <MESSAGE value="Set-up Task-creation functionality" />
+    <option name="LAST_COMMIT_MESSAGE" value="Set-up Task-creation functionality" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

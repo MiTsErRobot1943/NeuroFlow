@@ -840,6 +840,94 @@ body.sidebar-collapsed .main {
   margin-bottom: 10px;
 }
 
+.project-template-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.project-template-btn {
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.chatbot-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatbot-messages {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+  min-height: 150px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatbot-message {
+  max-width: 86%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.87rem;
+  line-height: 1.45;
+}
+
+.chatbot-message--assistant,
+.chatbot-message--loading {
+  align-self: flex-start;
+  background: rgba(74,159,232,0.12);
+  color: var(--text-primary);
+  border: 1px solid rgba(74,159,232,0.2);
+}
+
+.chatbot-message--user {
+  align-self: flex-end;
+  background: rgba(255,123,94,0.12);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,123,94,0.2);
+}
+
+.chatbot-form {
+  margin-top: 4px;
+}
+
+.chatbot-loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.chatbot-loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-sky);
+  animation: chatbotDotPulse 1s ease-in-out infinite;
+}
+
+.chatbot-loading-dots span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.chatbot-loading-dots span:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+@keyframes chatbotDotPulse {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
 
 /* ============================================================
    RESPONSIVE — tablet / smaller desktops
@@ -847,6 +935,7 @@ body.sidebar-collapsed .main {
 @media (max-width: 1024px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .task-builder-grid { grid-template-columns: 1fr; }
+  .project-template-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {

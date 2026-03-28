@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <meta name="csrf-token" content="{{ csrf_token }}" />
 </head>
 <body>
 
@@ -218,6 +219,21 @@
         </ul>
       </section>
 
+      <section class="level-card chatbot-panel" data-chatbot-scope="dashboard" aria-labelledby="chatbot-dashboard-heading">
+        <div class="tasks-section__header">
+          <h2 id="chatbot-dashboard-heading" class="section-title">Task Copilot</h2>
+        </div>
+        <p class="page-subtitle">Ask the assistant to split work into tasks or create tasks directly from chat.</p>
+        <div class="chatbot-messages" data-chatbot-messages aria-live="polite"></div>
+        <form class="chatbot-form" data-chatbot-form autocomplete="off">
+          <label for="chatbot-input-dashboard" class="task-form__label">Message</label>
+          <div class="task-inline-row">
+            <input id="chatbot-input-dashboard" class="task-input" data-chatbot-input type="text" maxlength="400" placeholder="Try: create task: Build analytics endpoint" required />
+            <button type="submit" class="btn btn--primary">Send</button>
+          </div>
+        </form>
+      </section>
+
     </section>
     <!-- end dashboard screen -->
 
@@ -273,6 +289,78 @@
           </form>
         </section>
       </div>
+
+      <section class="level-card" aria-labelledby="project-automation-heading">
+        <div class="tasks-section__header">
+          <h2 id="project-automation-heading" class="section-title">Project Automation</h2>
+        </div>
+        <p class="page-subtitle">Generate starter task breakdowns or configure a project plan from your experience profile.</p>
+        <div class="project-template-grid" role="group" aria-label="Predefined project templates">
+          <button type="button" class="btn project-template-btn" data-template="web">Web Project Plan</button>
+          <button type="button" class="btn project-template-btn" data-template="desktop">Desktop Project Plan</button>
+          <button type="button" class="btn project-template-btn" data-template="architecture">Architecture Plan</button>
+          <button type="button" class="btn project-template-btn" data-template="database">Database Plan</button>
+          <button type="button" class="btn btn--primary" id="open-project-config-btn">Configure Custom Project</button>
+        </div>
+      </section>
+
+      <section class="level-card" id="project-config-section" aria-labelledby="project-config-heading" hidden>
+        <div class="tasks-section__header">
+          <h2 id="project-config-heading" class="section-title">Configure Project</h2>
+        </div>
+        <form id="project-config-form" class="task-form" autocomplete="off">
+          <label for="project-name" class="task-form__label">Project Name</label>
+          <input id="project-name" name="project-name" class="task-input" type="text" maxlength="120" placeholder="e.g. Honors Platform v2" required />
+
+          <label for="experience-web" class="task-form__label">Web development experience</label>
+          <select id="experience-web" class="task-input" required>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+
+          <label for="experience-desktop" class="task-form__label">Desktop application experience</label>
+          <select id="experience-desktop" class="task-input" required>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+
+          <label for="experience-architecture" class="task-form__label">Software architecture experience</label>
+          <select id="experience-architecture" class="task-input" required>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+
+          <label for="experience-database" class="task-form__label">Database design experience</label>
+          <select id="experience-database" class="task-input" required>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+
+          <label for="project-config-notes" class="task-form__label">Additional context</label>
+          <textarea id="project-config-notes" class="task-input task-textarea" rows="3" maxlength="400" placeholder="Anything the planner should prioritize?"></textarea>
+
+          <button type="submit" class="btn btn--primary">Generate Individual Tasks</button>
+        </form>
+      </section>
+
+      <section class="level-card chatbot-panel" data-chatbot-scope="tasks" aria-labelledby="chatbot-tasks-heading">
+        <div class="tasks-section__header">
+          <h2 id="chatbot-tasks-heading" class="section-title">Task Copilot</h2>
+        </div>
+        <p class="page-subtitle">Use chat to generate or split tasks while planning.</p>
+        <div class="chatbot-messages" data-chatbot-messages aria-live="polite"></div>
+        <form class="chatbot-form" data-chatbot-form autocomplete="off">
+          <label for="chatbot-input-tasks" class="task-form__label">Message</label>
+          <div class="task-inline-row">
+            <input id="chatbot-input-tasks" class="task-input" data-chatbot-input type="text" maxlength="400" placeholder="Try: create task: Plan desktop packaging" required />
+            <button type="submit" class="btn btn--primary">Send</button>
+          </div>
+        </form>
+      </section>
 
       <section class="level-card" aria-labelledby="all-tasks-heading">
         <div class="tasks-section__header">

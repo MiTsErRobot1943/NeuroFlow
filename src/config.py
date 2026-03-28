@@ -100,12 +100,9 @@ def load_runtime_config(mode: Optional[str] = None) -> RuntimeConfig:
     if configured_db:
         db_path = Path(configured_db)
         logger.debug(f"Using configured DB path: {db_path}")
-    elif resolved_mode == "desktop":
-        db_path = _desktop_data_dir() / "data" / "neuroflow.db"
-        logger.debug(f"Using desktop app data path: {db_path}")
     else:
         db_path = DEFAULT_DB_PATH
-        logger.debug(f"Using default DB path: {db_path}")
+        logger.debug(f"Using shared default DB path: {db_path}")
 
     host = "0.0.0.0" if resolved_mode == "web" else "127.0.0.1"
     port = int(os.getenv("PORT", "5000"))
