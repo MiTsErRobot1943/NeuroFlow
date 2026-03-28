@@ -5,7 +5,6 @@ Provides the create_app factory function for instantiating Flask apps in differe
 plus centralized route registration and security middleware.
 """
 
-import os
 import secrets
 from typing import Optional
 
@@ -68,7 +67,7 @@ def create_app(mode: Optional[str] = None, init_db: bool = True) -> Flask:
         SESSION_COOKIE_SAMESITE=SESSION_CONFIG["COOKIE_SAMESITE"],
         NEUROFLOW_MODE=runtime.mode,
         NEUROFLOW_DB_PATH=str(runtime.db_path),
-        ANALYTICS_DATABASE_URL=os.getenv("ANALYTICS_DATABASE_URL", ""),
+        ANALYTICS_DATABASE_URL=runtime.analytics_database_url or "",
     )
 
     if init_db:
@@ -80,7 +79,7 @@ def create_app(mode: Optional[str] = None, init_db: bool = True) -> Flask:
             raise RuntimeError(f"Database initialization failed: {exc}") from exc
 
     register_security_headers(app)
-    initialize_analytics_database(app.config.get("ANALYTICS_DATABASE_URL"))
+    initialize_analytics_database(runtime.analytics_database_url)
     register_routes(app)
     logger.info(f"Flask app ready on {runtime.host}:{runtime.port}")
     return app

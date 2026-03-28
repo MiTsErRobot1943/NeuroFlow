@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NeuroFlow — Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -27,7 +29,11 @@
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="sidebar__logo">
-      <span class="logo-icon">🧠</span>
+      <img
+        class="logo-icon"
+        src="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}"
+        alt="NeuroFlow logo"
+      />
       <span class="logo-text">NeuroFlow</span>
     </div>
 

@@ -168,7 +168,12 @@ body.sidebar-collapsed .sidebar {
   margin-bottom: 20px;
 }
 
-.logo-icon { font-size: 1.6rem; }
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
 .logo-text  {
   font-family: var(--font-display);
   font-size: 1.4rem;
