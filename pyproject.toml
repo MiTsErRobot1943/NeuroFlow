@@ -23,6 +23,7 @@ dependencies = [
     "langchain-community>=0.3,<0.4",
     "langchain-ollama>=0.2,<0.3",
     "ollama>=0.6,<0.7",
+    "psycopg2-binary>=2.9,<3.0",
 ]
 
 [project.optional-dependencies]

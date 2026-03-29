@@ -17,22 +17,19 @@ Mode selection is controlled by `NEUROFLOW_MODE` (or launcher scripts).
 
 ## Local Setup (PowerShell)
 
+Run these from the repo root (`NeuroFlow`):
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Create the auth DB and first user:
-
-```powershell
+python -m pip install -r requirements.txt
 python db_setup.py --create-user your_username
 ```
 
 ## Run Locally
 
-Web mode:
+Web mode (dev defaults):
 
 ```powershell
 python run_web.py --mode dev
@@ -55,6 +52,13 @@ python run_desktop.py --no-window
 ```powershell
 python smoke_auth_test.py
 python smoke_desktop_startup_test.py
+```
+
+Optional explicit-host runs:
+
+```powershell
+python run_web.py --mode dev --host 127.0.0.1 --port 5000
+python run_desktop.py --host 127.0.0.1
 ```
 
 ## Docker Compose
