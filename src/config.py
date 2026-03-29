@@ -4,7 +4,6 @@ NeuroFlow runtime configuration.
 Handles mode-aware settings (dev/web/desktop), database paths, and server initialization parameters.
 """
 
-import logging
 import os
 import secrets
 from dataclasses import dataclass
@@ -29,6 +28,7 @@ class RuntimeConfig:
     host: str
     port: int
     debug: bool
+    analytics_database_url: Optional[str] = None
 
 
 def _desktop_data_dir() -> Path:
@@ -86,6 +86,7 @@ def load_runtime_config(mode: Optional[str] = None) -> RuntimeConfig:
         - NEUROFLOW_MODE: Runtime mode (dev/web/desktop)
         - NEUROFLOW_DB_PATH: Override SQLite database path
         - NEUROFLOW_SECRET_KEY: Override Flask secret key
+        - ANALYTICS_DATABASE_URL: PostgreSQL database URL for analytics
         - PORT: Override server port (default: 5000)
 
     Args:
@@ -100,17 +101,15 @@ def load_runtime_config(mode: Optional[str] = None) -> RuntimeConfig:
     if configured_db:
         db_path = Path(configured_db)
         logger.debug(f"Using configured DB path: {db_path}")
-    elif resolved_mode == "desktop":
-        db_path = _desktop_data_dir() / "data" / "neuroflow.db"
-        logger.debug(f"Using desktop app data path: {db_path}")
     else:
         db_path = DEFAULT_DB_PATH
-        logger.debug(f"Using default DB path: {db_path}")
+        logger.debug(f"Using shared default DB path: {db_path}")
 
     host = "0.0.0.0" if resolved_mode == "web" else "127.0.0.1"
     port = int(os.getenv("PORT", "5000"))
     debug = resolved_mode == "dev"
     secret_key = os.getenv("NEUROFLOW_SECRET_KEY", secrets.token_hex(32))
+    analytics_database_url = os.getenv("ANALYTICS_DATABASE_URL")
 
     logger.info(
         f"Loaded runtime config: mode={resolved_mode}, host={host}, port={port}, debug={debug}"
@@ -123,5 +122,6 @@ def load_runtime_config(mode: Optional[str] = None) -> RuntimeConfig:
         host=host,
         port=port,
         debug=debug,
+        analytics_database_url=analytics_database_url,
     )
 

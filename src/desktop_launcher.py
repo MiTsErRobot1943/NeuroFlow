@@ -5,7 +5,7 @@ Provides backend startup, health checks, and pywebview window integration for de
 """
 
 import contextlib
-import logging
+import os
 import socket
 import threading
 import time
@@ -24,12 +24,39 @@ from src.constants import (
     DESKTOP_WINDOW_HEIGHT,
     DESKTOP_WINDOW_TITLE,
     DESKTOP_WINDOW_WIDTH,
-    HTTP_RESPONSE_OK,
     HTTP_TIMEOUT,
 )
 from src.logging_config import setup_logger
 
 logger = setup_logger(__name__)
+
+
+def _configure_analytics_for_desktop() -> None:
+    """
+    Configure analytics database URL for desktop mode.
+    
+    Desktop mode connects to a local PostgreSQL instance at localhost:5432.
+    Requires NEUROFLOW_ANALYTICS_DB_PASSWORD environment variable or uses default.
+    Falls back gracefully if PostgreSQL is unavailable.
+    """
+    # Only configure if not already set
+    if os.getenv("ANALYTICS_DATABASE_URL"):
+        logger.debug("ANALYTICS_DATABASE_URL already set; skipping desktop analytics configuration")
+        return
+    
+    # Build PostgreSQL connection string for local analytics database
+    analytics_user = os.getenv("NEUROFLOW_ANALYTICS_USER", "neuroflow")
+    analytics_password = os.getenv("NEUROFLOW_ANALYTICS_PASSWORD", "neuroflow")
+    analytics_host = os.getenv("NEUROFLOW_ANALYTICS_HOST", "localhost")
+    analytics_port = os.getenv("NEUROFLOW_ANALYTICS_PORT", "5432")
+    analytics_db = os.getenv("NEUROFLOW_ANALYTICS_DB", "neuroflow_analytics")
+    
+    analytics_url = f"postgresql://{analytics_user}:{analytics_password}@{analytics_host}:{analytics_port}/{analytics_db}"
+    
+    # Set environment variable for Flask app to pick up
+    os.environ["ANALYTICS_DATABASE_URL"] = analytics_url
+    logger.info(f"Desktop analytics configured: {analytics_host}:{analytics_port}/{analytics_db}")
+
 
 
 @dataclass
@@ -86,6 +113,9 @@ def start_desktop_backend(
     """
     selected_port = port or _pick_open_port(host)
     logger.info(f"Starting desktop backend on {host}:{selected_port}")
+
+    # Configure analytics database for desktop mode
+    _configure_analytics_for_desktop()
 
     try:
         app = create_app(mode="desktop", init_db=True)
