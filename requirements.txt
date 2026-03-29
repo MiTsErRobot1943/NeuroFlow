@@ -14,3 +14,7 @@ langchain>=0.3,<0.4                       # LLM orchestration framework
 langchain-community>=0.3,<0.4             # Community integrations for LangChain
 langchain-ollama>=0.2,<0.3                # Ollama integration for LangChain
 ollama>=0.6,<0.7                          # Ollama Python client library
+
+# ========== Analytics Database ===========
+psycopg2-binary>=2.9,<3.0                 # PostgreSQL driver for analytics event storage
+

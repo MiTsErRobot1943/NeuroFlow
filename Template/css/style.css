@@ -99,6 +99,7 @@ body {
   transition: background var(--transition), color var(--transition);
   line-height: 1.6;
 }
+body.modal-open { overflow: hidden; }
 a { color: inherit; text-decoration: none; }
 ul { list-style: none; }
 img { display: block; max-width: 100%; }
@@ -167,7 +168,12 @@ body.sidebar-collapsed .sidebar {
   margin-bottom: 20px;
 }
 
-.logo-icon { font-size: 1.6rem; }
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
 .logo-text  {
   font-family: var(--font-display);
   font-size: 1.4rem;
@@ -665,10 +671,321 @@ body.sidebar-collapsed .main {
 
 
 /* ============================================================
+   TASK CREATOR
+   ============================================================ */
+.task-builder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.task-builder-card {
+  margin-bottom: 0;
+}
+
+.task-form {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-form--compact {
+  gap: 8px;
+}
+
+.task-form__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.task-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+.task-input:focus {
+  outline: 2px solid rgba(255,123,94,0.25);
+  border-color: var(--accent-coral);
+}
+
+.task-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.task-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.task-inline-row .btn {
+  flex-shrink: 0;
+}
+
+.task-submit-btn {
+  justify-content: center;
+}
+
+.task-subtask-builder {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+
+.subtask-draft-list,
+.task-subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.subtask-draft-item,
+.task-subtask-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+}
+
+.task-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.task-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.task-subtask-title {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.task-subtask-title--done {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.task-note {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.task-item__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.task-action-btn {
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-card);
+}
+
+.task-action-btn:hover {
+  color: var(--text-primary);
+}
+
+.task-input--inline {
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.task-inline-row--subtask {
+  margin-top: 8px;
+}
+
+.list-chip-wrap {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.list-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-coral);
+  border: 1px solid rgba(255,123,94,0.25);
+  background: rgba(255,123,94,0.08);
+}
+
+.task-empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.project-template-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.project-template-btn {
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.project-config-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.project-config-modal.is-open {
+  display: flex;
+}
+
+.project-config-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 46, 0.5);
+}
+
+.project-config-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  margin: 0;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.project-config-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-config-step[hidden] {
+  display: none;
+}
+
+.project-config-step .btn {
+  align-self: flex-start;
+}
+
+.chatbot-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatbot-messages {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+  min-height: 150px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatbot-message {
+  max-width: 86%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.87rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.chatbot-message--assistant,
+.chatbot-message--loading {
+  align-self: flex-start;
+  background: rgba(74,159,232,0.12);
+  color: var(--text-primary);
+  border: 1px solid rgba(74,159,232,0.2);
+}
+
+.chatbot-message--user {
+  align-self: flex-end;
+  background: rgba(255,123,94,0.12);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,123,94,0.2);
+}
+
+.chatbot-form {
+  margin-top: 4px;
+}
+
+.chatbot-loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.chatbot-loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-sky);
+  animation: chatbotDotPulse 1s ease-in-out infinite;
+}
+
+.chatbot-loading-dots span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.chatbot-loading-dots span:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+@keyframes chatbotDotPulse {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+
+/* ============================================================
    RESPONSIVE — tablet / smaller desktops
    ============================================================ */
 @media (max-width: 1024px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .task-builder-grid { grid-template-columns: 1fr; }
+  .project-template-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -684,4 +1001,8 @@ body.sidebar-collapsed .main {
 
   .page-title { font-size: 1.5rem; }
   .stat-grid  { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .task-inline-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

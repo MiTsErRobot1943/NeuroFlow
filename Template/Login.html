@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NeuroFlow - Login</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -12,6 +14,11 @@
 <body>
   <main class="main" style="display:flex;justify-content:center;align-items:center;min-height:100vh;padding:1rem;">
     <section class="level-card" style="width:100%;max-width:420px;">
+      <img
+        src="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}"
+        alt="NeuroFlow logo"
+        style="width:56px;height:56px;margin:0 auto 0.75rem auto;"
+      />
       <h1 class="page-title" style="margin-bottom:0.5rem;">Welcome back</h1>
       <p class="page-subtitle" style="margin-bottom:1rem;">Sign in to continue to your dashboard.</p>
 
