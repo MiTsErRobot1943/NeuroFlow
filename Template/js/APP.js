@@ -100,11 +100,19 @@ document.addEventListener('DOMContentLoaded', () => {
     dashboard: document.getElementById('screen-dashboard'),
     tasks: document.getElementById('screen-tasks'),
     profile: document.getElementById('screen-profile'),
+    settings: document.getElementById('screen-settings'),
     achievements: document.getElementById('screen-achievements')
   };
 
   const sidebarToggle = document.getElementById('sidebar-toggle');
   const savedSidebarCollapsed = localStorage.getItem('nf-sidebar-collapsed') === 'true';
+  const settingsThemeSelect = document.getElementById('settings-theme-select');
+  const settingsSidebarCollapsed = document.getElementById('settings-sidebar-collapsed');
+  const settingsDyslexic = document.getElementById('settings-dyslexic');
+  const settingsFocus = document.getElementById('settings-focus');
+  const settingsSpacing = document.getElementById('settings-spacing');
+  const settingsResetPreferencesBtn = document.getElementById('settings-reset-preferences');
+  const settingsStatus = document.getElementById('settings-status');
 
   function setSidebarCollapsed(collapsed) {
     document.body.classList.toggle('sidebar-collapsed', collapsed);
@@ -113,6 +121,48 @@ document.addEventListener('DOMContentLoaded', () => {
       const expanded = !collapsed;
       sidebarToggle.setAttribute('aria-expanded', String(expanded));
       sidebarToggle.setAttribute('aria-label', expanded ? 'Close navigation menu' : 'Open navigation menu');
+    }
+  }
+
+  function setDarkThemeEnabled(enabled) {
+    const darkEnabled = Boolean(enabled);
+    html.setAttribute('data-theme', darkEnabled ? 'dark' : 'light');
+    localStorage.setItem('nf-theme', darkEnabled ? 'dark' : 'light');
+
+    const darkToggle = document.getElementById('toggle-dark');
+    if (darkToggle) {
+      darkToggle.setAttribute('aria-checked', String(darkEnabled));
+    }
+  }
+
+  function setAccessibilityPreference(toggleId, className, enabled) {
+    const active = Boolean(enabled);
+    document.body.classList.toggle(className, active);
+    localStorage.setItem(`nf-${toggleId}`, String(active));
+
+    const toggle = document.getElementById(toggleId);
+    if (toggle) {
+      toggle.setAttribute('aria-checked', String(active));
+    }
+  }
+
+  function syncSettingsControls() {
+    if (settingsThemeSelect instanceof HTMLSelectElement) {
+      settingsThemeSelect.value = html.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+
+    if (settingsSidebarCollapsed instanceof HTMLInputElement) {
+      settingsSidebarCollapsed.checked = document.body.classList.contains('sidebar-collapsed');
+    }
+
+    if (settingsDyslexic instanceof HTMLInputElement) {
+      settingsDyslexic.checked = document.body.classList.contains('a11y-dyslexic');
+    }
+    if (settingsFocus instanceof HTMLInputElement) {
+      settingsFocus.checked = document.body.classList.contains('a11y-focus');
+    }
+    if (settingsSpacing instanceof HTMLInputElement) {
+      settingsSpacing.checked = document.body.classList.contains('a11y-spacing');
     }
   }
 
@@ -141,6 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
         link.removeAttribute('aria-current');
       }
     });
+
+    if (screenName === 'settings') {
+      syncSettingsControls();
+    }
   }
 
   document.querySelectorAll('[data-screen]').forEach(link => {
@@ -153,6 +207,65 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   showScreen('dashboard');
+
+  if (settingsThemeSelect instanceof HTMLSelectElement) {
+    settingsThemeSelect.addEventListener('change', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLSelectElement)) return;
+      setDarkThemeEnabled(target.value === 'dark');
+      if (settingsStatus) settingsStatus.textContent = 'Theme preference saved.';
+    });
+  }
+
+  if (settingsSidebarCollapsed instanceof HTMLInputElement) {
+    settingsSidebarCollapsed.addEventListener('change', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      setSidebarCollapsed(target.checked);
+      if (settingsStatus) settingsStatus.textContent = 'Sidebar preference saved.';
+    });
+  }
+
+  if (settingsDyslexic instanceof HTMLInputElement) {
+    settingsDyslexic.addEventListener('change', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      setAccessibilityPreference('toggle-dyslexic', 'a11y-dyslexic', target.checked);
+      if (settingsStatus) settingsStatus.textContent = 'Accessibility preference saved.';
+    });
+  }
+
+  if (settingsFocus instanceof HTMLInputElement) {
+    settingsFocus.addEventListener('change', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      setAccessibilityPreference('toggle-focus', 'a11y-focus', target.checked);
+      if (settingsStatus) settingsStatus.textContent = 'Accessibility preference saved.';
+    });
+  }
+
+  if (settingsSpacing instanceof HTMLInputElement) {
+    settingsSpacing.addEventListener('change', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      setAccessibilityPreference('toggle-spacing', 'a11y-spacing', target.checked);
+      if (settingsStatus) settingsStatus.textContent = 'Accessibility preference saved.';
+    });
+  }
+
+  if (settingsResetPreferencesBtn) {
+    settingsResetPreferencesBtn.addEventListener('click', () => {
+      setDarkThemeEnabled(false);
+      setSidebarCollapsed(false);
+      setAccessibilityPreference('toggle-dyslexic', 'a11y-dyslexic', false);
+      setAccessibilityPreference('toggle-focus', 'a11y-focus', false);
+      setAccessibilityPreference('toggle-spacing', 'a11y-spacing', false);
+      syncSettingsControls();
+      if (settingsStatus) settingsStatus.textContent = 'Preferences reset to defaults.';
+    });
+  }
+
+  syncSettingsControls();
 
   function generateId(prefix) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -854,10 +967,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function animateStats() {
     setTimeout(() => {
-      animateCount(document.getElementById('stat-xp'), '1240');
-      animateCount(document.getElementById('stat-streak'), '5');
+      animateCount(document.getElementById('stat-xp'), '0');
+      animateCount(document.getElementById('stat-streak'), '0');
       animateCount(document.getElementById('stat-tasks'), String(countCompletedTasks()));
-      animateCount(document.getElementById('stat-badges'), '4');
+      animateCount(document.getElementById('stat-badges'), '0');
     }, 300);
   }
 

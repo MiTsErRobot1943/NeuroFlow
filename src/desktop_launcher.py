@@ -24,6 +24,7 @@ from src.constants import (
     DESKTOP_WINDOW_HEIGHT,
     DESKTOP_WINDOW_TITLE,
     DESKTOP_WINDOW_WIDTH,
+    HTTP_RESPONSE_OK,
     HTTP_TIMEOUT,
 )
 from src.logging_config import setup_logger
