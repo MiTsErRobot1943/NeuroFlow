@@ -5,6 +5,7 @@ Starts the Flask backend with pywebview desktop window, or performs health check
 """
 
 import argparse
+import logging
 import sys
 from urllib.request import urlopen
 from urllib.error import URLError
