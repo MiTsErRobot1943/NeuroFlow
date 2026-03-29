@@ -6,12 +6,256 @@ import json
 import os
 import re
 from typing import Any
+from urllib.parse import quote_plus
+from urllib.request import Request
+from urllib.request import urlopen
 
 from src.logging_config import setup_logger
 
 logger = setup_logger(__name__)
 
 _CREATE_TASK_PATTERN = re.compile(r"^(?:create|add)\s+task\s*[:\-]?\s*(.+)$", re.IGNORECASE)
+_CREATE_TASK_BROAD_PATTERNS = [
+    re.compile(
+        r"^(?:create|add|set[\s-]*up|setup|prepare|plan)\s+"
+        r"(?:a\s+|an\s+|the\s+)?"
+        r"(?:project\s+)?(?:tasks|task|steps|step|project\s+plan|project\s+steps|plan)"
+        r"(?:\s+(?:for|on|about|around|by))?\s*[:\-]?\s*(?P<title>.+)$",
+        re.IGNORECASE,
+    ),
+]
+_CODE_SNIPPET_PATTERN = re.compile(
+    r"\b(code\s+snippet|syntax|example\s+code|show\s+code|how\s+to\s+write)\b",
+    re.IGNORECASE,
+)
+_WEB_SEARCH_PATTERN = re.compile(
+    r"\b(search\s+the\s+web|search\s+web|look\s+up|find\s+online|web\s+search|google)\b",
+    re.IGNORECASE,
+)
+
+_CS_KEYWORDS = {
+    "algorithm",
+    "algorithms",
+    "data structure",
+    "big o",
+    "complexity",
+    "python",
+    "javascript",
+    "java",
+    "c++",
+    "sql",
+    "api",
+    "flask",
+    "database",
+    "query",
+    "function",
+    "class",
+    "loop",
+    "array",
+    "list",
+    "dictionary",
+    "recursion",
+    "debug",
+    "testing",
+    "project",
+    "task",
+}
+
+_SNIPPET_LIBRARY = {
+    "python": {
+        "loop": (
+            "```python\n"
+            "items = ['auth', 'db', 'tests']\n"
+            "for idx, item in enumerate(items, start=1):\n"
+            "    print(f'{idx}. {item}')\n"
+            "```"
+        ),
+        "function": (
+            "```python\n"
+            "def build_task(title: str, done: bool = False) -> dict[str, object]:\n"
+            "    return {'title': title, 'done': done}\n"
+            "```"
+        ),
+    },
+    "javascript": {
+        "async": (
+            "```javascript\n"
+            "async function fetchTasks() {\n"
+            "  const res = await fetch('/api/tasks', { credentials: 'same-origin' });\n"
+            "  const data = await res.json();\n"
+            "  return data.tasks || [];\n"
+            "}\n"
+            "```"
+        ),
+        "array": (
+            "```javascript\n"
+            "const doneTasks = tasks\n"
+            "  .filter(task => task.done)\n"
+            "  .map(task => task.title);\n"
+            "```"
+        ),
+    },
+    "sql": {
+        "join": (
+            "```sql\n"
+            "SELECT t.id, t.title, l.name AS list_name\n"
+            "FROM tasks t\n"
+            "JOIN task_lists l ON l.id = t.list_id\n"
+            "WHERE t.user_id = ?;\n"
+            "```"
+        ),
+        "group": (
+            "```sql\n"
+            "SELECT source, COUNT(*) AS created_count\n"
+            "FROM tasks\n"
+            "GROUP BY source\n"
+            "ORDER BY created_count DESC;\n"
+            "```"
+        ),
+    },
+}
+
+
+def _extract_task_draft_title(message: str) -> str | None:
+    normalized = re.sub(r"\s+", " ", message.strip())
+    if not normalized:
+        return None
+
+    match = _CREATE_TASK_PATTERN.match(normalized)
+    if match:
+        title = match.group(1).strip()
+        return title[:160] if title else None
+
+    for pattern in _CREATE_TASK_BROAD_PATTERNS:
+        broad_match = pattern.match(normalized)
+        if not broad_match:
+            continue
+
+        title = str(broad_match.group("title") or "").strip()
+        title = re.sub(r"^(?:for|on|about|around|by)\s+", "", title, flags=re.IGNORECASE)
+        title = re.sub(r"^(?:plan|tasks?|steps?)\s+(?:for\s+)?", "", title, flags=re.IGNORECASE)
+        title = title.strip(" .:-")
+        if title:
+            return title[:160]
+
+    return None
+
+
+def _looks_like_cs_or_project_question(message: str) -> bool:
+    lowered = message.lower()
+    return any(token in lowered for token in _CS_KEYWORDS)
+
+
+def _select_snippet(message: str) -> tuple[str, str] | None:
+    lowered = message.lower()
+    if "python" in lowered:
+        if "function" in lowered or "def" in lowered:
+            return "python", _SNIPPET_LIBRARY["python"]["function"]
+        return "python", _SNIPPET_LIBRARY["python"]["loop"]
+    if "javascript" in lowered or "js" in lowered:
+        if "async" in lowered or "await" in lowered or "fetch" in lowered:
+            return "javascript", _SNIPPET_LIBRARY["javascript"]["async"]
+        return "javascript", _SNIPPET_LIBRARY["javascript"]["array"]
+    if "sql" in lowered or "query" in lowered:
+        if "group" in lowered or "count" in lowered:
+            return "sql", _SNIPPET_LIBRARY["sql"]["group"]
+        return "sql", _SNIPPET_LIBRARY["sql"]["join"]
+    return None
+
+
+def _fallback_cs_help(message: str) -> dict[str, Any]:
+    snippet = _select_snippet(message)
+    if snippet:
+        language, code_block = snippet
+        return {
+            "message": (
+                f"Here is a {language} example you can adapt:\n\n"
+                f"{code_block}\n\n"
+                "Tip: tell me the exact concept (loops, functions, SQL joins, async fetch) "
+                "and I can tailor it to your current task."
+            ),
+            "action": "none",
+            "topic": "code_snippet",
+        }
+
+    return {
+        "message": (
+            "I can help with CS and project questions (algorithms, data structures, APIs, SQL, debugging, testing). "
+            "If you want syntax practice, ask for a code snippet in Python, JavaScript, or SQL."
+        ),
+        "action": "none",
+        "topic": "cs_help",
+    }
+
+
+def _strip_tags(text: str) -> str:
+    return re.sub(r"<[^>]+>", "", text)
+
+
+def _search_web(query: str, max_results: int = 3) -> list[dict[str, str]]:
+    endpoint = f"https://duckduckgo.com/html/?q={quote_plus(query)}"
+    request = Request(endpoint, headers={"User-Agent": "Mozilla/5.0 NeuroFlow/1.0"})
+
+    with urlopen(request, timeout=7) as response:  # nosec B310 - trusted HTTPS endpoint
+        html = response.read().decode("utf-8", errors="ignore")
+
+    pattern = re.compile(
+        r'<a[^>]*class="result__a"[^>]*href="(?P<href>[^"]+)"[^>]*>(?P<title>.*?)</a>',
+        re.IGNORECASE,
+    )
+    matches = pattern.finditer(html)
+
+    results: list[dict[str, str]] = []
+    for match in matches:
+        href = str(match.group("href") or "").strip()
+        title = _strip_tags(str(match.group("title") or "")).strip()
+        if not href or not title:
+            continue
+        results.append({"title": title, "url": href})
+        if len(results) >= max_results:
+            break
+
+    return results
+
+
+def _web_search_response(message: str, allow_web_search: bool) -> dict[str, Any]:
+    query = re.sub(r"\b(search\s+the\s+web|search\s+web|look\s+up|find\s+online|web\s+search|google)\b", "", message, flags=re.IGNORECASE).strip(" .:-")
+    if not query:
+        query = message.strip()
+
+    if not allow_web_search:
+        return {
+            "message": (
+                "I can search the web for that, but I need your permission first. "
+                "Approve web search?"
+            ),
+            "action": "request_web_permission",
+            "web_query": query,
+        }
+
+    try:
+        results = _search_web(query)
+    except Exception as exc:  # pragma: no cover - network dependent
+        logger.warning("Web search failed: %s", exc)
+        return {
+            "message": "I could not reach web search right now. Please try again shortly.",
+            "action": "none",
+            "topic": "web_search_error",
+        }
+
+    if not results:
+        return {
+            "message": f"No web results found for: {query}",
+            "action": "none",
+            "topic": "web_search",
+        }
+
+    formatted = "\n".join(f"- {item['title']}: {item['url']}" for item in results)
+    return {
+        "message": f"Top web results for '{query}':\n{formatted}",
+        "action": "web_search_results",
+        "results": results,
+    }
 
 
 try:
@@ -20,10 +264,13 @@ except ImportError:  # pragma: no cover - optional dependency at runtime
     ollama = None
 
 
-def _fallback_response(message: str, tasks: list[dict[str, Any]]) -> dict[str, Any]:
-    match = _CREATE_TASK_PATTERN.match(message.strip())
-    if match:
-        title = match.group(1).strip()[:160]
+def _fallback_response(
+    message: str,
+    tasks: list[dict[str, Any]],
+    allow_web_search: bool = False,
+) -> dict[str, Any]:
+    title = _extract_task_draft_title(message)
+    if title:
         return {
             "message": f"Created a task draft for: {title}",
             "action": "create_task",
@@ -35,10 +282,22 @@ def _fallback_response(message: str, tasks: list[dict[str, Any]]) -> dict[str, A
             },
         }
 
+    if _WEB_SEARCH_PATTERN.search(message):
+        return _web_search_response(message, allow_web_search)
+
+    if _CODE_SNIPPET_PATTERN.search(message) or _looks_like_cs_or_project_question(message):
+        return _fallback_cs_help(message)
+
+    if "?" in message and not _looks_like_cs_or_project_question(message):
+        return _web_search_response(message, allow_web_search)
+
     recent_titles = ", ".join(task["title"] for task in tasks[:3]) if tasks else "none yet"
     return {
         "message": (
-            "I can help create tasks. Try: 'create task: Build API auth layer'. "
+            "I can help create tasks. Try: 'create task: Build API auth layer' or "
+            "'set up tasks for capstone backend project'. "
+            "I can also answer CS/project questions and share syntax snippets. "
+            "For non-project topics, I can search the web with your permission. "
             f"Recent tasks: {recent_titles}."
         ),
         "action": "none",
@@ -59,8 +318,9 @@ def generate_response(
     message: str,
     tasks: list[dict[str, Any]],
     profile: dict[str, Any] | None = None,
+    allow_web_search: bool = False,
 ) -> dict[str, Any]:
-    fallback = _fallback_response(message, tasks)
+    fallback = _fallback_response(message, tasks, allow_web_search=allow_web_search)
 
     if ollama is None:
         return fallback
@@ -89,11 +349,15 @@ def generate_response(
 
     prompt = (
         "You are NeuroFlow's assistant. Respond with JSON only and keys: "
-        "message (string), action ('none' or 'create_task'), task (object when action=create_task). "
+        "message (string), action ('none' or 'create_task' or 'request_web_permission' or 'web_search_results'), "
+        "task (object when action=create_task). "
         "If action=create_task include task.title, task.notes, task.subtasks (array of strings), "
         "task.list_name. Keep concise.\n"
+        "For CS/project questions, provide clear conceptual help and short syntax examples when useful.\n"
+        "For unrelated topics, ask web-search permission before browsing.\n"
         f"User message: {message}\n"
         f"Task history: {json.dumps(task_preview)}\n"
+        f"Web search already approved for this request: {allow_web_search}\n"
         f"{profile_text}"
     )
 

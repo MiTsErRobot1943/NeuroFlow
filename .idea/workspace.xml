@@ -4,15 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/ANALYTICS_DESKTOP_SETUP.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DESKTOP_ANALYTICS_CHANGES.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/QUICKSTART_DESKTOP_ANALYTICS.md" afterDir="false" />
+    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="Chatbot functionality working mostly + logo added">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Template/Dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/Template/Dashboard.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Template/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/Template/css/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Template/js/APP.js" beforeDir="false" afterPath="$PROJECT_DIR$/Template/js/APP.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/app_factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/desktop_launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/desktop_launcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/chatbot.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/chatbot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -226,7 +224,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774715196123</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Chatbot functionality working mostly + logo added">
+      <option name="closed" value="true" />
+      <created>1774719718097</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1774719718097</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -273,7 +279,8 @@
     <MESSAGE value="improved architecture layout of docker containers, added in analytics database" />
     <MESSAGE value="Set-up Task-creation functionality" />
     <MESSAGE value="Set-up Chatbot functionality that has access to task creation and task history" />
-    <option name="LAST_COMMIT_MESSAGE" value="Set-up Chatbot functionality that has access to task creation and task history" />
+    <MESSAGE value="Chatbot functionality working mostly + logo added" />
+    <option name="LAST_COMMIT_MESSAGE" value="Chatbot functionality working mostly + logo added" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

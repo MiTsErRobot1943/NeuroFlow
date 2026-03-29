@@ -407,12 +407,21 @@ def register_routes(app: Flask) -> None:
         if not message:
             return _json_error("Message is required")
 
+        allow_web_search = bool(payload.get("allow_web_search", False))
+        skip_user_log = bool(payload.get("skip_user_log", False))
+
         db_path = app.config["NEUROFLOW_DB_PATH"]
-        append_chat_message(user_id, "user", message, db_path)
+        if not skip_user_log:
+            append_chat_message(user_id, "user", message, db_path)
 
         tasks_snapshot = list_tasks(user_id, db_path)
         profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else None
-        chatbot_response = generate_response(message=message, tasks=tasks_snapshot, profile=profile)
+        chatbot_response = generate_response(
+            message=message,
+            tasks=tasks_snapshot,
+            profile=profile,
+            allow_web_search=allow_web_search,
+        )
 
         created_task = None
         if chatbot_response.get("action") == "create_task":
@@ -436,7 +445,11 @@ def register_routes(app: Flask) -> None:
             app.config.get("ANALYTICS_DATABASE_URL"),
             "chatbot_interaction",
             session.get("username", "user"),
-            {"action": chatbot_response.get("action", "none"), "created_task": bool(created_task)},
+            {
+                "action": chatbot_response.get("action", "none"),
+                "created_task": bool(created_task),
+                "allow_web_search": allow_web_search,
+            },
         )
         return jsonify({"ok": True, "response": chatbot_response, "created_task": created_task})
 

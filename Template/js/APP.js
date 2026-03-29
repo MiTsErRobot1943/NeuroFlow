@@ -773,10 +773,25 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const profilePayload = getChatbotProfilePayload();
 
-      const payload = await apiFetch('/api/chatbot', {
+      let payload = await apiFetch('/api/chatbot', {
         method: 'POST',
         body: JSON.stringify({ message, profile: profilePayload })
       });
+
+      if (payload.response?.action === 'request_web_permission') {
+        const approved = window.confirm(`${payload.response.message}\n\nAllow web search for this query?`);
+        if (approved) {
+          payload = await apiFetch('/api/chatbot', {
+            method: 'POST',
+            body: JSON.stringify({
+              message,
+              profile: profilePayload,
+              allow_web_search: true,
+              skip_user_log: true
+            })
+          });
+        }
+      }
 
       state.chatHistory.push({ role: 'user', message });
       state.chatHistory.push({ role: 'assistant', message: payload.response?.message || 'Done.' });
