@@ -146,6 +146,14 @@ def _looks_like_cs_or_project_question(message: str) -> bool:
     return any(token in lowered for token in _CS_KEYWORDS)
 
 
+def _looks_like_task_listing_request(message: str) -> bool:
+    lowered = message.lower().strip()
+    return bool(
+        re.search(r"\b(show|list|view|display)\s+(?:my\s+)?tasks?\b", lowered)
+        or re.search(r"\bwhat\s+tasks?\s+do\s+i\s+have\b", lowered)
+    )
+
+
 def _select_snippet(message: str) -> tuple[str, str] | None:
     lowered = message.lower()
     if "python" in lowered:
@@ -285,11 +293,15 @@ def _fallback_response(
     if _WEB_SEARCH_PATTERN.search(message):
         return _web_search_response(message, allow_web_search)
 
-    if _CODE_SNIPPET_PATTERN.search(message) or _looks_like_cs_or_project_question(message):
+    if (
+        _CODE_SNIPPET_PATTERN.search(message)
+        or (
+            _looks_like_cs_or_project_question(message)
+            and not _looks_like_task_listing_request(message)
+        )
+    ):
         return _fallback_cs_help(message)
 
-    if "?" in message and not _looks_like_cs_or_project_question(message):
-        return _web_search_response(message, allow_web_search)
 
     recent_titles = ", ".join(task["title"] for task in tasks[:3]) if tasks else "none yet"
     return {

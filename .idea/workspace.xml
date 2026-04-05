@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="Chatbot functionality working mostly + logo added">
-      <change afterPath="$PROJECT_DIR$/Template/js/login.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/services/accessibility_recommender.py" afterDir="false" />
+    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Template/Dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/Template/Dashboard.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Template/js/APP.js" beforeDir="false" afterPath="$PROJECT_DIR$/Template/js/APP.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/desktop_launcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/desktop_launcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/chatbot.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/chatbot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -103,10 +99,17 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
     "dart.analysis.tool.window.visible": "false",
     "git-widget-placeholder": "master",
-    "last_opened_file_path": "C:/Users/blair/OneDrive/Documents/Software Engineering Honor project/NeuroFlow"
+    "last_opened_file_path": "C:/Users/blair/OneDrive/Documents/Software Engineering Honor project/NeuroFlow",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -164,7 +167,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-1cd77e80b48f-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.32098.74" />
+        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
       </set>
     </attachedChunks>
   </component>
@@ -232,8 +235,19 @@
       <option name="project" value="LOCAL" />
       <updated>1774719718097</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Add settings screen with accessibility preferences and theme options">
+      <option name="closed" value="true" />
+      <created>1774812273236</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1774812273236</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="RECENT_FILTERS">
@@ -280,7 +294,8 @@
     <MESSAGE value="Set-up Task-creation functionality" />
     <MESSAGE value="Set-up Chatbot functionality that has access to task creation and task history" />
     <MESSAGE value="Chatbot functionality working mostly + logo added" />
-    <option name="LAST_COMMIT_MESSAGE" value="Chatbot functionality working mostly + logo added" />
+    <MESSAGE value="Add settings screen with accessibility preferences and theme options" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add settings screen with accessibility preferences and theme options" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
