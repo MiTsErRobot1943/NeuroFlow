@@ -161,18 +161,28 @@
       <div class="level-card">
         <div class="level-card__header">
           <div class="level-badge" aria-label="Current level: 1">
-            <span class="level-badge__num">1</span>
+            <span class="level-badge__num" id="level-badge-num">1</span>
           </div>
           <div class="level-card__info">
-            <p class="level-card__title">Level 1 — <span class="level-card__rank">Starter</span></p>
-            <p class="level-card__sub">100 XP to Level 2</p>
+            <p class="level-card__title">Level <span id="level-title-value">1</span> — <span class="level-card__rank" id="level-rank">Starter</span></p>
+            <p class="level-card__sub" id="level-subtext">100 XP to Level 2</p>
           </div>
-          <div class="level-card__next" aria-hidden="true">Level 2 →</div>
+          <div class="level-card__next" id="level-nexttext" aria-hidden="true">Level 2 →</div>
         </div>
-        <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Level progress: 0%">
+        <div class="progress-track" id="level-progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Level progress: 0%">
           <div class="progress-fill" id="level-progress" style="--progress: 0%"></div>
         </div>
-        <p class="progress-label">0 / 100 XP</p>
+        <p class="progress-label" id="level-progress-label">0 / 100 XP</p>
+
+        <div class="health-row">
+          <div class="health-row__header">
+            <p class="health-row__title">Focus Health</p>
+            <p class="health-row__value" id="dashboard-health-label">100%</p>
+          </div>
+          <div class="health-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Focus health: 100%" id="dashboard-health-track">
+            <div class="health-fill" id="dashboard-health-fill" style="--health-progress: 100%"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Recent Tasks -->
@@ -418,13 +428,66 @@
       <header class="page-header">
         <div>
           <h1 class="page-title">Profile</h1>
-          <p class="page-subtitle">View your settings, preferences, and progress snapshot.</p>
+          <p class="page-subtitle">Your personalized progress snapshot, health status, and learning profile.</p>
         </div>
       </header>
 
-      <div class="level-card">
-        <p class="level-card__title">Profile details coming soon</p>
-        <p class="level-card__sub">This page is now accessible and ready for profile data integration.</p>
+      <div class="profile-grid">
+        <section class="level-card profile-card profile-card--hero" aria-labelledby="profile-overview-heading">
+          <div class="profile-hero">
+            <div class="profile-avatar" aria-hidden="true">NF</div>
+            <div>
+              <h2 id="profile-overview-heading" class="section-title">{{ username|e }}</h2>
+              <p class="page-subtitle">Level <span id="profile-level">1</span> • <span id="profile-rank">Starter</span></p>
+            </div>
+          </div>
+          <p class="level-card__sub" id="profile-xp-summary">0 total XP earned so far.</p>
+        </section>
+
+        <section class="level-card profile-card" aria-labelledby="profile-health-heading">
+          <div class="tasks-section__header">
+            <h2 id="profile-health-heading" class="section-title">Health Bar</h2>
+          </div>
+          <p class="page-subtitle">Keep this high by completing tasks and avoiding too many open tasks.</p>
+          <div class="health-track health-track--large" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Profile health: 100%" id="profile-health-track">
+            <div class="health-fill" id="profile-health-fill" style="--health-progress: 100%"></div>
+          </div>
+          <p class="progress-label" id="profile-health-label">100 / 100 health</p>
+        </section>
+
+        <section class="level-card profile-card" aria-labelledby="profile-stats-heading">
+          <div class="tasks-section__header">
+            <h2 id="profile-stats-heading" class="section-title">Progress Stats</h2>
+          </div>
+          <div class="profile-stat-grid">
+            <article class="profile-stat-chip">
+              <p class="profile-stat-chip__label">Total XP</p>
+              <p class="profile-stat-chip__value" id="profile-total-xp">0</p>
+            </article>
+            <article class="profile-stat-chip">
+              <p class="profile-stat-chip__label">Streak</p>
+              <p class="profile-stat-chip__value" id="profile-streak">0 days</p>
+            </article>
+            <article class="profile-stat-chip">
+              <p class="profile-stat-chip__label">Tasks Completed</p>
+              <p class="profile-stat-chip__value" id="profile-completed-tasks">0</p>
+            </article>
+            <article class="profile-stat-chip">
+              <p class="profile-stat-chip__label">Badges</p>
+              <p class="profile-stat-chip__value" id="profile-badges">0</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="level-card profile-card" aria-labelledby="profile-learning-heading">
+          <div class="tasks-section__header">
+            <h2 id="profile-learning-heading" class="section-title">Learning Profile</h2>
+          </div>
+          <p class="page-subtitle"><strong>Programming knowledge:</strong> <span id="profile-programming-knowledge">Not set</span></p>
+          <p class="page-subtitle"><strong>Project experience:</strong> <span id="profile-project-experience">Not set</span></p>
+          <p class="page-subtitle"><strong>Learning difficulties:</strong> <span id="profile-learning-difficulties">Not set</span></p>
+          <p class="level-card__sub" id="profile-project-examples"></p>
+        </section>
       </div>
     </section>
 

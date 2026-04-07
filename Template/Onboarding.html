@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroFlow - Onboarding</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <main class="main" style="display:flex;justify-content:center;align-items:center;min-height:100vh;padding:1rem;">
+    <section class="level-card" style="width:100%;max-width:680px;">
+      <img
+        src="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}"
+        alt="NeuroFlow logo"
+        style="width:56px;height:56px;margin:0 auto 0.75rem auto;"
+      />
+      <h1 class="page-title" style="margin-bottom:0.5rem;">A few quick questions</h1>
+      <p class="page-subtitle" style="margin-bottom:1rem;">These answers help us tune the analytical engine and accessibility features before you reach the dashboard.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <p role="alert" style="margin-bottom:0.75rem;color:{% if category == 'error' %}#b30000{% else %}#004d00{% endif %};">{{ message }}</p>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('onboarding') }}" data-onboarding-form autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;">
+          <div>
+            <p data-onboarding-step-title style="margin:0;font-weight:800;">Question 1</p>
+            <p data-onboarding-step-counter style="margin:0;color:#64748b;">1 of 3</p>
+          </div>
+          <span class="tag tag--sky">Setup wizard</span>
+        </div>
+
+        <section data-onboarding-step>
+          <label for="programming_knowledge" style="display:block;font-weight:700;margin-bottom:0.45rem;">1. How much programming knowledge do you have?</label>
+          <select id="programming_knowledge" name="programming_knowledge" required style="width:100%;padding:0.75rem;border:1px solid #cbd5e1;border-radius:10px;">
+            <option value="" selected disabled>Choose one</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </section>
+
+        <section data-onboarding-step hidden>
+          <fieldset style="border:0;padding:0;margin:0;">
+            <legend style="font-weight:700;margin-bottom:0.45rem;">2. Have you done a project before?</legend>
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.85rem;">
+              <label style="display:flex;align-items:center;gap:0.45rem;">
+                <input type="radio" name="has_project_experience" value="yes" required />
+                Yes
+              </label>
+              <label style="display:flex;align-items:center;gap:0.45rem;">
+                <input type="radio" name="has_project_experience" value="no" />
+                No
+              </label>
+            </div>
+          </fieldset>
+
+          <div data-project-details hidden>
+            <label for="project_examples" style="display:block;font-weight:700;margin-bottom:0.45rem;">If yes, tell us about one or two projects you have done.</label>
+            <textarea
+              id="project_examples"
+              name="project_examples"
+              rows="4"
+              maxlength="800"
+              placeholder="Example: built a Flask task tracker, made a school app, helped with a website redesign..."
+              style="width:100%;padding:0.75rem;border:1px solid #cbd5e1;border-radius:10px;resize:vertical;"
+            ></textarea>
+          </div>
+        </section>
+
+        <section data-onboarding-step hidden>
+          <fieldset style="border:0;padding:0;margin:0;">
+            <legend style="font-weight:700;margin-bottom:0.45rem;">3. What learning difficulties do you have? Select all that apply.</legend>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.6rem;">
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="dyslexia" /> Dyslexia</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="adhd" /> ADHD</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="executive_function" /> Executive function</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="visual_processing" /> Visual processing</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="auditory_processing" /> Auditory processing</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="motor" /> Motor / handwriting</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="anxiety" /> Anxiety</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="other" /> Other</label>
+              <label style="display:flex;align-items:center;gap:0.45rem;"><input type="checkbox" name="learning_difficulties" value="none" /> None of these</label>
+            </div>
+          </fieldset>
+        </section>
+
+        <div style="display:flex;justify-content:space-between;gap:0.75rem;margin-top:1.25rem;">
+          <button type="button" class="btn" data-onboarding-action="back" hidden>Back</button>
+          <div style="margin-left:auto;display:flex;gap:0.75rem;">
+            <button type="button" class="btn" data-onboarding-action="next">Next</button>
+            <button type="submit" class="btn btn--primary" data-onboarding-action="submit" hidden>Finish setup</button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
+</body>
+</html>
+

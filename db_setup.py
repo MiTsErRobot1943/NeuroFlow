@@ -1,10 +1,12 @@
 import argparse
+import json
 import logging
 import os
 import re
 import sqlite3
 from getpass import getpass
 from pathlib import Path
+from typing import Any
 from typing import Optional
 
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -48,6 +50,22 @@ def initialize_database(db_path: Optional[str] = None) -> None:
 
     try:
         _apply_schema()
+        conn = _connect(str(path))
+        try:
+            existing_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(users)").fetchall()
+            }
+            onboarding_columns = {
+                "onboarding_required": "INTEGER NOT NULL DEFAULT 0",
+                "onboarding_completed_at": "TEXT",
+                "onboarding_data_json": "TEXT NOT NULL DEFAULT '{}'",
+            }
+            for column_name, column_definition in onboarding_columns.items():
+                if column_name not in existing_columns:
+                    conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_definition}")
+            conn.commit()
+        finally:
+            conn.close()
     except sqlite3.DatabaseError as exc:
         # Recover automatically when the existing file is not a valid SQLite DB.
         if "not a database" not in str(exc).lower() or not path.exists():
@@ -82,8 +100,8 @@ def create_user(username: str, password: str, db_path: Optional[str] = None) -> 
         conn = _connect(db_path)
         try:
             conn.execute(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                (username, password_hash),
+                "INSERT INTO users (username, password_hash, onboarding_required, onboarding_data_json) VALUES (?, ?, ?, ?)",
+                (username, password_hash, 1, json.dumps({})),
             )
             conn.commit()
         finally:
@@ -110,6 +128,83 @@ def verify_user(username: str, password: str, db_path: Optional[str] = None):
         return None
 
     return {"id": row["id"], "username": row["username"]}
+
+
+def get_user_onboarding(user_id: int, db_path: Optional[str] = None) -> dict[str, Any] | None:
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            """
+            SELECT onboarding_required, onboarding_completed_at, onboarding_data_json
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return None
+
+    try:
+        onboarding_data = json.loads(row["onboarding_data_json"] or "{}")
+    except json.JSONDecodeError:
+        onboarding_data = {}
+
+    if not isinstance(onboarding_data, dict):
+        onboarding_data = {}
+
+    return {
+        "required": bool(row["onboarding_required"]),
+        "completed_at": row["onboarding_completed_at"],
+        "data": onboarding_data,
+    }
+
+
+def save_user_onboarding(user_id: int, payload: dict[str, object], db_path: Optional[str] = None) -> dict[str, Any]:
+    programming_knowledge = str(payload.get("programming_knowledge", "")).strip()
+    has_project_experience_raw = payload.get("has_project_experience", False)
+    if isinstance(has_project_experience_raw, str):
+        has_project_experience = has_project_experience_raw.strip().lower() in {"1", "true", "yes", "on"}
+    else:
+        has_project_experience = bool(has_project_experience_raw)
+
+    project_examples = str(payload.get("project_examples", "")).strip()
+    learning_difficulties_raw = payload.get("learning_difficulties", [])
+    if isinstance(learning_difficulties_raw, str):
+        learning_difficulties = [item.strip() for item in learning_difficulties_raw.split(",") if item.strip()]
+    elif isinstance(learning_difficulties_raw, list):
+        learning_difficulties = [str(item).strip() for item in learning_difficulties_raw if str(item).strip()]
+    else:
+        learning_difficulties = []
+
+    onboarding_data = {
+        "programming_knowledge": programming_knowledge,
+        "has_project_experience": has_project_experience,
+        "project_examples": project_examples,
+        "learning_difficulties": learning_difficulties,
+    }
+
+    conn = _connect(db_path)
+    try:
+        cursor = conn.execute(
+            """
+            UPDATE users
+            SET onboarding_required = 0,
+                onboarding_completed_at = CURRENT_TIMESTAMP,
+                onboarding_data_json = ?
+            WHERE id = ?
+            """,
+            (json.dumps(onboarding_data), user_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise ValueError("User not found")
+    finally:
+        conn.close()
+
+    return onboarding_data
 
 
 def _build_parser() -> argparse.ArgumentParser:

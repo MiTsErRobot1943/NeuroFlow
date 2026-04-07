@@ -2,6 +2,9 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE CHECK (length(username) BETWEEN 3 AND 50),
     password_hash TEXT NOT NULL,
+    onboarding_required INTEGER NOT NULL DEFAULT 0,
+    onboarding_completed_at TEXT,
+    onboarding_data_json TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

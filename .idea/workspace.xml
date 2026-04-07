@@ -4,9 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="">
+    <list default="true" id="1b9a1fa3-0086-40da-b6f7-5e2551b3bbc2" name="Changes" comment="Fixed testing errors">
+      <change afterPath="$PROJECT_DIR$/Template/Onboarding.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Template/Signup.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Template/js/onboarding.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/unit/test_db_setup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/chatbot.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/chatbot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Template/Dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/Template/Dashboard.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Template/Login.html" beforeDir="false" afterPath="$PROJECT_DIR$/Template/Login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Template/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/Template/css/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Template/js/APP.js" beforeDir="false" afterPath="$PROJECT_DIR$/Template/js/APP.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/db_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/schema.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/smoke_auth_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/smoke_auth_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/app_factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/db_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/db_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_api.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -103,7 +116,7 @@
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "master",
+    "git-widget-placeholder": "Development/feature-Accout__customization",
     "last_opened_file_path": "C:/Users/blair/OneDrive/Documents/Software Engineering Honor project/NeuroFlow",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -243,7 +256,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774812273236</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Fixed testing errors">
+      <option name="closed" value="true" />
+      <created>1775419258252</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1775419258252</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -295,7 +316,8 @@
     <MESSAGE value="Set-up Chatbot functionality that has access to task creation and task history" />
     <MESSAGE value="Chatbot functionality working mostly + logo added" />
     <MESSAGE value="Add settings screen with accessibility preferences and theme options" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add settings screen with accessibility preferences and theme options" />
+    <MESSAGE value="Fixed testing errors" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed testing errors" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
