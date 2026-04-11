@@ -322,11 +322,14 @@ def register_routes(app: Flask) -> None:
             if created:
                 logger.info(f"Successful signup for user: {username}")
                 user = verify_user(username=username, password=password, db_path=app.config["NEUROFLOW_DB_PATH"])
+                if user is None:
+                    logger.error(f"verify_user returned None after successful create_user for username: {username}")
+                    flash("Account created but could not be verified. Please log in.", "error")
+                    return redirect(url_for("login"))
                 session.clear()
-                if user:
-                    session["user_id"] = user["id"]
-                    session["username"] = user["username"]
-                    session["csrf_token"] = secrets.token_urlsafe(CSRF_TOKEN_LENGTH)
+                session["user_id"] = user["id"]
+                session["username"] = user["username"]
+                session["csrf_token"] = secrets.token_urlsafe(CSRF_TOKEN_LENGTH)
                 track_event(
                     app.config.get("ANALYTICS_DATABASE_URL"),
                     "signup_success",
