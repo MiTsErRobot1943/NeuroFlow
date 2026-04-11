@@ -62,7 +62,7 @@ class ApiTestBase(unittest.TestCase):
         """Obtain a CSRF token from the current session."""
         with self.client.session_transaction() as sess:
             token = str(sess.get("csrf_token") or "")
-        self.assertIsNotNone(token, "CSRF token not found in session")
+        self.assertTrue(token, "CSRF token not found in session")
         return token
 
     def _login(self) -> None:
