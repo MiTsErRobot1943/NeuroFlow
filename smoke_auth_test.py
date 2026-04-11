@@ -14,6 +14,8 @@ from src.services import db_setup
 # Test credentials
 TEST_USERNAME = "testuser"
 TEST_PASSWORD = "StrongPass123!"
+TEST_SIGNUP_USERNAME = "newsmokeuser"
+TEST_SIGNUP_PASSWORD = "StrongSignup123!"
 
 
 class AuthSmokeTest(unittest.TestCase):
@@ -63,6 +65,58 @@ class AuthSmokeTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/", response.headers["Location"])
+
+    def test_signup_success_then_login(self):
+        """Sign-up should create an account that can immediately log in."""
+        self.client.get("/signup")
+        csrf = self._csrf_from_session()
+
+        signup_response = self.client.post(
+            "/signup",
+            data={
+                "username": TEST_SIGNUP_USERNAME,
+                "password": TEST_SIGNUP_PASSWORD,
+                "confirm_password": TEST_SIGNUP_PASSWORD,
+                "csrf_token": csrf,
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(signup_response.status_code, 200)
+        self.assertIn(b"Account created successfully", signup_response.data)
+
+        self.client.get("/login")
+        login_csrf = self._csrf_from_session()
+        login_response = self.client.post(
+            "/login",
+            data={
+                "username": TEST_SIGNUP_USERNAME,
+                "password": TEST_SIGNUP_PASSWORD,
+                "csrf_token": login_csrf,
+            },
+            follow_redirects=False,
+        )
+
+        self.assertEqual(login_response.status_code, 302)
+
+    def test_signup_duplicate_username_rejected(self):
+        """Sign-up should reject usernames that already exist."""
+        self.client.get("/signup")
+        csrf = self._csrf_from_session()
+
+        response = self.client.post(
+            "/signup",
+            data={
+                "username": TEST_USERNAME,
+                "password": TEST_PASSWORD,
+                "confirm_password": TEST_PASSWORD,
+                "csrf_token": csrf,
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Unable to create account", response.data)
 
     def test_sql_injection_attempt_rejected(self):
         """Test SQL injection attempts are rejected."""

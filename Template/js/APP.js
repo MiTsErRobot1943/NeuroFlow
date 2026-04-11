@@ -13,7 +13,18 @@ document.addEventListener('DOMContentLoaded', () => {
     csrfToken: '',
     lists: [],
     tasks: [],
-    chatHistory: []
+    chatHistory: [],
+    onboarding: { required: false, completed_at: null, data: {} },
+    progression: {
+      xp: 0,
+      level: 1,
+      xpIntoLevel: 0,
+      xpToNext: 100,
+      health: 100,
+      streak: 0,
+      badges: 0,
+      completedTasks: 0
+    }
   };
 
   function getCsrfToken() {
@@ -144,6 +155,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggle) {
       toggle.setAttribute('aria-checked', String(active));
     }
+  }
+
+  function getOnboardingDifficulties() {
+    const data = state.onboarding?.data || {};
+    const raw = data.learning_difficulties;
+    if (Array.isArray(raw)) return raw.map(item => String(item).trim()).filter(Boolean);
+    if (typeof raw === 'string') return raw.split(',').map(item => item.trim()).filter(Boolean);
+    return [];
+  }
+
+  function applyOnboardingAccessibilityDefaults() {
+    const difficulties = new Set(getOnboardingDifficulties().map(item => item.toLowerCase()));
+    if (!difficulties.size || difficulties.has('none')) return;
+
+    const preferenceMap = [
+      { difficulty: ['dyslexia'], toggleId: 'toggle-dyslexic', className: 'a11y-dyslexic' },
+      { difficulty: ['adhd', 'executive_function'], toggleId: 'toggle-focus', className: 'a11y-focus' },
+      { difficulty: ['visual_processing', 'motor'], toggleId: 'toggle-spacing', className: 'a11y-spacing' }
+    ];
+
+    preferenceMap.forEach(({ difficulty, toggleId, className }) => {
+      const savedPreference = localStorage.getItem(`nf-${toggleId}`);
+      const shouldEnable = savedPreference === null && difficulty.some(item => difficulties.has(item));
+      if (shouldEnable) {
+        setAccessibilityPreference(toggleId, className, true);
+      }
+    });
   }
 
   function syncSettingsControls() {
@@ -326,10 +364,208 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.tasks.filter(task => task.done).length;
   }
 
+  function countOpenTasks() {
+    return state.tasks.filter(task => !task.done).length;
+  }
+
+  function countCompletedSubtasks() {
+    return state.tasks.reduce(
+      (total, task) => total + (task.subtasks || []).filter(subtask => subtask.done).length,
+      0
+    );
+  }
+
+  function getRankForLevel(level) {
+    if (level >= 20) return 'Legend';
+    if (level >= 12) return 'Master';
+    if (level >= 8) return 'Expert';
+    if (level >= 5) return 'Builder';
+    if (level >= 3) return 'Apprentice';
+    return 'Starter';
+  }
+
+  function getIsoDate(offsetDays = 0) {
+    const date = new Date();
+    date.setDate(date.getDate() + offsetDays);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function updateDailyStreak(completedTasks) {
+    const streakKey = 'nf-streak';
+    const lastActiveKey = 'nf-last-active-date';
+    let streak = Number(localStorage.getItem(streakKey) || '0');
+
+    if (completedTasks <= 0) {
+      return Number.isFinite(streak) ? streak : 0;
+    }
+
+    const today = getIsoDate();
+    const yesterday = getIsoDate(-1);
+    const lastActive = localStorage.getItem(lastActiveKey);
+
+    if (lastActive === today) {
+      return Number.isFinite(streak) ? Math.max(streak, 1) : 1;
+    }
+
+    if (lastActive === yesterday) {
+      streak = Number.isFinite(streak) ? streak + 1 : 1;
+    } else {
+      streak = 1;
+    }
+
+    localStorage.setItem(streakKey, String(streak));
+    localStorage.setItem(lastActiveKey, today);
+    return streak;
+  }
+
+  function computeProgression() {
+    const completedTasks = countCompletedTasks();
+    const completedSubtasks = countCompletedSubtasks();
+    const openTasks = countOpenTasks();
+
+    const xp = (completedTasks * 75) + (completedSubtasks * 15);
+    const level = Math.floor(xp / 100) + 1;
+    const xpIntoLevel = xp % 100;
+    const xpToNext = xpIntoLevel === 0 ? 100 : 100 - xpIntoLevel;
+    const streak = updateDailyStreak(completedTasks);
+    const badges = Math.floor(completedTasks / 5) + Math.floor(streak / 7);
+    const health = Math.max(0, Math.min(100, (100 - (openTasks * 6)) + (completedTasks * 2) + (streak * 3)));
+
+    state.progression = {
+      xp,
+      level,
+      xpIntoLevel,
+      xpToNext,
+      health,
+      streak,
+      badges,
+      completedTasks
+    };
+  }
+
+  function setHealthProgress(track, fill, label, health) {
+    if (track) {
+      track.setAttribute('aria-valuenow', String(health));
+      track.setAttribute('aria-label', `Focus health: ${health}%`);
+    }
+    if (fill) {
+      fill.style.setProperty('--health-progress', `${health}%`);
+    }
+    if (label) {
+      label.textContent = label.id === 'profile-health-label' ? `${health} / 100 health` : `${health}%`;
+    }
+  }
+
+  function formatDifficulty(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) return '';
+    const labelMap = {
+      executive_function: 'Executive function',
+      visual_processing: 'Visual processing',
+      auditory_processing: 'Auditory processing'
+    };
+    return labelMap[normalized] || normalized.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  function renderProgressionUi() {
+    computeProgression();
+
+    const { xp, level, xpIntoLevel, xpToNext, health, streak, badges, completedTasks } = state.progression;
+    const rank = getRankForLevel(level);
+
+    const statXp = document.getElementById('stat-xp');
+    const statStreak = document.getElementById('stat-streak');
+    const statTasks = document.getElementById('stat-tasks');
+    const statBadges = document.getElementById('stat-badges');
+
+    if (statXp) statXp.textContent = String(xp);
+    if (statStreak) statStreak.textContent = String(streak);
+    if (statTasks) statTasks.textContent = String(completedTasks);
+    if (statBadges) statBadges.textContent = String(badges);
+
+    const levelBadge = document.getElementById('level-badge-num');
+    const levelTitle = document.getElementById('level-title-value');
+    const levelRank = document.getElementById('level-rank');
+    const levelSubtext = document.getElementById('level-subtext');
+    const levelNext = document.getElementById('level-nexttext');
+    const levelLabel = document.getElementById('level-progress-label');
+    const levelTrack = document.getElementById('level-progress-track');
+    const levelFill = document.getElementById('level-progress');
+
+    if (levelBadge) levelBadge.textContent = String(level);
+    if (levelTitle) levelTitle.textContent = String(level);
+    if (levelRank) levelRank.textContent = rank;
+    if (levelSubtext) levelSubtext.textContent = `${xpToNext} XP to Level ${level + 1}`;
+    if (levelNext) levelNext.textContent = `Level ${level + 1} →`;
+    if (levelLabel) levelLabel.textContent = `${xpIntoLevel} / 100 XP`;
+    if (levelTrack) {
+      levelTrack.setAttribute('aria-valuenow', String(xpIntoLevel));
+      levelTrack.setAttribute('aria-label', `Level progress: ${xpIntoLevel}%`);
+    }
+    if (levelFill) {
+      levelFill.style.setProperty('--progress', `${xpIntoLevel}%`);
+    }
+
+    setHealthProgress(
+      document.getElementById('dashboard-health-track'),
+      document.getElementById('dashboard-health-fill'),
+      document.getElementById('dashboard-health-label'),
+      health
+    );
+
+    const onboardingData = state.onboarding?.data || {};
+    const learningDifficulties = getOnboardingDifficulties();
+
+    const profileLevel = document.getElementById('profile-level');
+    const profileRank = document.getElementById('profile-rank');
+    const profileXpSummary = document.getElementById('profile-xp-summary');
+    const profileTotalXp = document.getElementById('profile-total-xp');
+    const profileStreak = document.getElementById('profile-streak');
+    const profileCompletedTasks = document.getElementById('profile-completed-tasks');
+    const profileBadges = document.getElementById('profile-badges');
+    const profileProgrammingKnowledge = document.getElementById('profile-programming-knowledge');
+    const profileProjectExperience = document.getElementById('profile-project-experience');
+    const profileLearningDifficulties = document.getElementById('profile-learning-difficulties');
+    const profileProjectExamples = document.getElementById('profile-project-examples');
+
+    if (profileLevel) profileLevel.textContent = String(level);
+    if (profileRank) profileRank.textContent = rank;
+    if (profileXpSummary) profileXpSummary.textContent = `${xp} total XP earned so far.`;
+    if (profileTotalXp) profileTotalXp.textContent = String(xp);
+    if (profileStreak) profileStreak.textContent = `${streak} day${streak === 1 ? '' : 's'}`;
+    if (profileCompletedTasks) profileCompletedTasks.textContent = String(completedTasks);
+    if (profileBadges) profileBadges.textContent = String(badges);
+
+    if (profileProgrammingKnowledge) {
+      const knowledge = String(onboardingData.programming_knowledge || '').trim();
+      profileProgrammingKnowledge.textContent = knowledge ? knowledge.replace(/\b\w/g, char => char.toUpperCase()) : 'Not set';
+    }
+    if (profileProjectExperience) {
+      const hasProjects = onboardingData.has_project_experience === true;
+      profileProjectExperience.textContent = hasProjects ? 'Yes' : 'No';
+    }
+    if (profileLearningDifficulties) {
+      profileLearningDifficulties.textContent = learningDifficulties.length
+        ? learningDifficulties.map(formatDifficulty).join(', ')
+        : 'None reported';
+    }
+    if (profileProjectExamples) {
+      const examples = String(onboardingData.project_examples || '').trim();
+      profileProjectExamples.textContent = examples ? `Recent examples: ${examples}` : '';
+    }
+
+    setHealthProgress(
+      document.getElementById('profile-health-track'),
+      document.getElementById('profile-health-fill'),
+      document.getElementById('profile-health-label'),
+      health
+    );
+  }
+
   function updateTaskStatCounter() {
     const statTasks = document.getElementById('stat-tasks');
     if (!statTasks) return;
-    statTasks.textContent = String(countCompletedTasks());
+    statTasks.textContent = String(state.progression.completedTasks || countCompletedTasks());
   }
 
   function renderDraftSubtasks() {
@@ -466,6 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTaskBoard();
     renderRecentTasks();
     renderChatPanels();
+    renderProgressionUi();
     updateTaskStatCounter();
   }
 
@@ -492,6 +729,8 @@ document.addEventListener('DOMContentLoaded', () => {
     state.lists = payload.lists || [];
     state.tasks = payload.tasks || [];
     state.chatHistory = payload.chat_history || [];
+    state.onboarding = payload.onboarding || state.onboarding;
+    applyOnboardingAccessibilityDefaults();
     renderTaskUi();
   }
 
@@ -591,6 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function getChatbotProfilePayload() {
     const baseline = latestProjectConfig || getProjectConfigPayload();
     const experienceLevel = baseline.experience_level || 'beginner';
+    const onboardingData = state.onboarding?.data || {};
     return {
       web_experience: experienceLevel,
       desktop_experience: experienceLevel,
@@ -599,7 +839,11 @@ document.addEventListener('DOMContentLoaded', () => {
       project_type: baseline.project_type || 'web',
       language_framework: baseline.language_framework || '',
       time_management_style: baseline.time_management_style || 'structured',
-      memory_style: baseline.memory_style || 'mixed'
+      memory_style: baseline.memory_style || 'mixed',
+      programming_knowledge: onboardingData.programming_knowledge || '',
+      has_project_experience: Boolean(onboardingData.has_project_experience),
+      project_examples: onboardingData.project_examples || '',
+      learning_difficulties: getOnboardingDifficulties()
     };
   }
 
@@ -967,10 +1211,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function animateStats() {
     setTimeout(() => {
-      animateCount(document.getElementById('stat-xp'), '0');
-      animateCount(document.getElementById('stat-streak'), '0');
-      animateCount(document.getElementById('stat-tasks'), String(countCompletedTasks()));
-      animateCount(document.getElementById('stat-badges'), '0');
+      animateCount(document.getElementById('stat-xp'), String(state.progression.xp));
+      animateCount(document.getElementById('stat-streak'), String(state.progression.streak));
+      animateCount(document.getElementById('stat-tasks'), String(state.progression.completedTasks));
+      animateCount(document.getElementById('stat-badges'), String(state.progression.badges));
     }, 300);
   }
 

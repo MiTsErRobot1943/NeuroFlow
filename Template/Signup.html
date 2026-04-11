@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NeuroFlow - Login</title>
+  <title>NeuroFlow - Sign Up</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
   <link rel="shortcut icon" href="{{ url_for('static', filename='images/neuroflow_logo_icon.svg') }}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,8 +19,8 @@
         alt="NeuroFlow logo"
         style="width:56px;height:56px;margin:0 auto 0.75rem auto;"
       />
-      <h1 class="page-title" style="margin-bottom:0.5rem;">Welcome back</h1>
-      <p class="page-subtitle" style="margin-bottom:1rem;">Sign in to continue to your dashboard.</p>
+      <h1 class="page-title" style="margin-bottom:0.5rem;">Create your account</h1>
+      <p class="page-subtitle" style="margin-bottom:1rem;">Sign up, answer a few setup questions, and then we’ll open your NeuroFlow dashboard.</p>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -30,7 +30,7 @@
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('login') }}" autocomplete="off">
+      <form method="post" action="{{ url_for('signup') }}" autocomplete="off">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
 
         <label for="username">Username</label>
@@ -52,14 +52,24 @@
           type="password"
           minlength="8"
           required
+          style="width:100%;margin:0.35rem 0 0.9rem 0;padding:0.65rem;border:1px solid #cbd5e1;border-radius:10px;"
+        />
+
+        <label for="confirm_password">Confirm Password</label>
+        <input
+          id="confirm_password"
+          name="confirm_password"
+          type="password"
+          minlength="8"
+          required
           style="width:100%;margin:0.35rem 0 1rem 0;padding:0.65rem;border:1px solid #cbd5e1;border-radius:10px;"
         />
 
-        <button class="btn btn--primary" type="submit" style="width:100%;">Login</button>
+        <button class="btn btn--primary" type="submit" style="width:100%;">Sign Up</button>
       </form>
       <p style="margin-top:0.9rem;text-align:center;">
-        New to NeuroFlow?
-        <a href="{{ url_for('signup') }}">Create an account</a>
+        Already have an account?
+        <a href="{{ url_for('login') }}">Log in</a>
       </p>
     </section>
   </main>

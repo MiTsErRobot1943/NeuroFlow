@@ -11,10 +11,13 @@ import json
 import os
 import tempfile
 import unittest
+from typing import cast
 from unittest.mock import patch
 
-from db_setup import create_user, initialize_database
+from db_setup import create_user, initialize_database, save_user_onboarding, verify_user
 from src.app_factory import create_app
+from flask.testing import FlaskClient
+from werkzeug.test import TestResponse
 
 TEST_USER = "integtester"
 TEST_PASS = "StrongPass456!"
@@ -31,10 +34,22 @@ class ApiTestBase(unittest.TestCase):
 
         initialize_database(self.db_path)
         create_user(TEST_USER, TEST_PASS, self.db_path)
+        test_user = verify_user(TEST_USER, TEST_PASS, self.db_path)
+        self.assertIsNotNone(test_user)
+        save_user_onboarding(
+            test_user["id"],
+            {
+                "programming_knowledge": "intermediate",
+                "has_project_experience": True,
+                "project_examples": "Existing dashboard user",
+                "learning_difficulties": [],
+            },
+            self.db_path,
+        )
 
         self.app = create_app(mode="dev", init_db=False)
         self.app.testing = True
-        self.client = self.app.test_client()
+        self.client = cast(FlaskClient, self.app.test_client())
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -46,8 +61,8 @@ class ApiTestBase(unittest.TestCase):
     def _csrf(self) -> str:
         """Obtain a CSRF token from the current session."""
         with self.client.session_transaction() as sess:
-            token = sess.get("csrf_token")
-        self.assertIsNotNone(token, "CSRF token not found in session")
+            token = str(sess.get("csrf_token") or "")
+        self.assertTrue(token, "CSRF token not found in session")
         return token
 
     def _login(self) -> None:
@@ -60,7 +75,7 @@ class ApiTestBase(unittest.TestCase):
             follow_redirects=True,
         )
 
-    def _json_post(self, url: str, payload: dict) -> object:
+    def _json_post(self, url: str, payload: dict) -> TestResponse:
         csrf = self._csrf()
         return self.client.post(
             url,
@@ -88,6 +103,117 @@ class TestAuthRoutes(ApiTestBase):
     def test_get_login_returns_200(self):
         resp = self.client.get("/login")
         self.assertEqual(resp.status_code, 200)
+
+    def test_get_signup_returns_200(self):
+        resp = self.client.get("/signup")
+        self.assertEqual(resp.status_code, 200)
+
+    def test_signup_success_redirects_to_onboarding_and_allows_completion(self):
+        self.client.get("/signup")
+        csrf = self._csrf()
+        signup_resp = self.client.post(
+            "/signup",
+            data={
+                "username": "new_integ_user",
+                "password": "NewStrongPass789!",
+                "confirm_password": "NewStrongPass789!",
+                "csrf_token": csrf,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(signup_resp.status_code, 200)
+        self.assertIn(b"Account created successfully", signup_resp.data)
+        self.assertIn(b"A few quick questions", signup_resp.data)
+
+        onboarding_resp = self.client.get("/onboarding")
+        self.assertEqual(onboarding_resp.status_code, 200)
+
+        onboarding_csrf = self._csrf()
+        complete_resp = self.client.post(
+            "/onboarding",
+            data={
+                "programming_knowledge": "beginner",
+                "has_project_experience": "no",
+                "learning_difficulties": ["none"],
+                "csrf_token": onboarding_csrf,
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(complete_resp.status_code, 302)
+
+    def test_signup_then_login_new_user_redirects_to_onboarding(self):
+        self.client.get("/signup")
+        csrf = self._csrf()
+        self.client.post(
+            "/signup",
+            data={
+                "username": "new_integ_user",
+                "password": "NewStrongPass789!",
+                "confirm_password": "NewStrongPass789!",
+                "csrf_token": csrf,
+            },
+            follow_redirects=False,
+        )
+
+        self.client.get("/login")
+        login_csrf = self._csrf()
+        login_resp = self.client.post(
+            "/login",
+            data={
+                "username": "new_integ_user",
+                "password": "NewStrongPass789!",
+                "csrf_token": login_csrf,
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(login_resp.status_code, 302)
+        self.assertIn("/onboarding", login_resp.headers.get("Location", ""))
+
+    def test_signup_duplicate_username_shows_error(self):
+        self.client.get("/signup")
+        csrf = self._csrf()
+        resp = self.client.post(
+            "/signup",
+            data={
+                "username": TEST_USER,
+                "password": TEST_PASS,
+                "confirm_password": TEST_PASS,
+                "csrf_token": csrf,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Unable to create account", resp.data)
+
+    def test_signup_password_mismatch_shows_error(self):
+        self.client.get("/signup")
+        csrf = self._csrf()
+        resp = self.client.post(
+            "/signup",
+            data={
+                "username": "mismatch_user",
+                "password": "StrongPass456!",
+                "confirm_password": "DifferentPass456!",
+                "csrf_token": csrf,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Passwords do not match", resp.data)
+
+    def test_signup_missing_csrf_rejected(self):
+        resp = self.client.post(
+            "/signup",
+            data={
+                "username": "no_csrf_user",
+                "password": "StrongPass456!",
+                "confirm_password": "StrongPass456!",
+                "csrf_token": "bad",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Invalid request token", resp.data)
 
     def test_login_success_redirects_to_dashboard(self):
         self.client.get("/login")
@@ -146,6 +272,19 @@ class TestDashboardRoute(ApiTestBase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
 
+    def test_dashboard_redirects_incomplete_user_to_onboarding(self):
+        create_user("needs_onboarding", TEST_PASS, self.db_path)
+        self.client.get("/login")
+        csrf = self._csrf()
+        self.client.post(
+            "/login",
+            data={"username": "needs_onboarding", "password": TEST_PASS, "csrf_token": csrf},
+            follow_redirects=False,
+        )
+        resp = self.client.get("/", follow_redirects=False)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/onboarding", resp.headers.get("Location", ""))
+
 
 # ── Bootstrap API ─────────────────────────────────────────────────────────────
 
@@ -165,6 +304,7 @@ class TestBootstrapApi(ApiTestBase):
         self.assertIn("tasks", body)
         self.assertIn("username", body)
         self.assertIn("csrf_token", body)
+        self.assertIn("onboarding", body)
 
 
 # ── Tasks API ─────────────────────────────────────────────────────────────────
