@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
   const form = document.querySelector('[data-onboarding-form]');
   if (!(form instanceof HTMLFormElement)) return;
   const steps = Array.from(document.querySelectorAll('[data-onboarding-step]'));
@@ -90,6 +90,28 @@
       }
       if (field instanceof HTMLElement && 'checkValidity' in field && !field.checkValidity()) {
         field.reportValidity();
+        return false;
+      }
+    }
+    // Validate required radio groups: ensure at least one option is selected.
+    const radioNames = new Set(
+      fields
+        .filter(f => f instanceof HTMLInputElement && f.type === 'radio' && f.required)
+        .map(f => /** @type {HTMLInputElement} */ (f).name)
+    );
+    for (const name of radioNames) {
+      const group = /** @type {HTMLInputElement[]} */ (
+        Array.from(step.querySelectorAll(`input[type="radio"][name="${CSS.escape(name)}"]`))
+      );
+      const anyChecked = group.some(r => r instanceof HTMLInputElement && r.checked);
+      if (!anyChecked) {
+        const first = group.find(r => r instanceof HTMLInputElement);
+        if (first instanceof HTMLInputElement) {
+          first.focus();
+          first.setCustomValidity('Please select an option.');
+          first.reportValidity();
+          first.setCustomValidity('');
+        }
         return false;
       }
     }
