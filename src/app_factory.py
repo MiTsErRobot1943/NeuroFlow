@@ -7,7 +7,6 @@ plus centralized route registration and security middleware.
 
 import secrets
 from typing import Optional
-from typing import cast
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 
