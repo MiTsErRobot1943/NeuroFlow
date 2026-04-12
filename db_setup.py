@@ -13,7 +13,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "data" / "neuroflow.db"
-SCHEMA_PATH = BASE_DIR / "schema.sql"
+SCHEMA_PATH = BASE_DIR / "src" / "assets" / "schema.sql"
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{3,50}$")
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,26 @@ def initialize_database(db_path: Optional[str] = None) -> None:
             for column_name, column_definition in onboarding_columns.items():
                 if column_name not in existing_columns:
                     conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_definition}")
+
+            task_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(tasks)").fetchall()
+            }
+            task_deadline_columns = {
+                "due_date": "TEXT",
+            }
+            for column_name, column_definition in task_deadline_columns.items():
+                if column_name not in task_columns:
+                    conn.execute(f"ALTER TABLE tasks ADD COLUMN {column_name} {column_definition}")
+
+            project_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(project_profiles)").fetchall()
+            }
+            profile_deadline_columns = {
+                "target_deadline": "TEXT",
+            }
+            for column_name, column_definition in profile_deadline_columns.items():
+                if column_name not in project_columns:
+                    conn.execute(f"ALTER TABLE project_profiles ADD COLUMN {column_name} {column_definition}")
             conn.commit()
         finally:
             conn.close()

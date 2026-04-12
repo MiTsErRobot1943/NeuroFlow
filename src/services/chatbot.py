@@ -17,13 +17,30 @@ logger = setup_logger(__name__)
 _CREATE_TASK_PATTERN = re.compile(r"^(?:create|add)\s+task\s*[:\-]?\s*(.+)$", re.IGNORECASE)
 _CREATE_TASK_BROAD_PATTERNS = [
     re.compile(
-        r"^(?:create|add|set[\s-]*up|setup|prepare|plan)\s+"
+        r"^(?:create|add|set|set[\s-]*up|setup|prepare|plan)\s+"
         r"(?:a\s+|an\s+|the\s+)?"
         r"(?:project\s+)?(?:tasks|task|steps|step|project\s+plan|project\s+steps|plan)"
         r"(?:\s+(?:for|on|about|around|by))?\s*[:\-]?\s*(?P<title>.+)$",
         re.IGNORECASE,
     ),
 ]
+_BUILD_APP_INTENT_PATTERNS = [
+    re.compile(
+        r"^(?:how\s+do\s+i\s+|how\s+to\s+)?(?:build|make|create|develop)\s+"
+        r"(?:a\s+|an\s+|the\s+)?(?P<goal>.+)$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^(?:set|setup|set\s+up|create|add|plan|prepare)\s+"
+        r"(?:tasks?|steps?|plan)\s+(?:for|to)\s+"
+        r"(?P<goal>(?:building|making|creating|developing)\s+.+)$",
+        re.IGNORECASE,
+    ),
+]
+_APP_NOUN_PATTERN = re.compile(
+    r"\b(app|application|game|website|web\s*app|tool|platform|api|system|browser\s+game)\b",
+    re.IGNORECASE,
+)
 _CODE_SNIPPET_PATTERN = re.compile(
     r"\b(code\s+snippet|syntax|example\s+code|show\s+code|how\s+to\s+write)\b",
     re.IGNORECASE,
@@ -139,6 +156,48 @@ def _extract_task_draft_title(message: str) -> str | None:
             return title[:160]
 
     return None
+
+
+def _extract_build_goal(message: str) -> str | None:
+    normalized = re.sub(r"\s+", " ", message.strip())
+    if not normalized:
+        return None
+
+    for pattern in _BUILD_APP_INTENT_PATTERNS:
+        match = pattern.match(normalized)
+        if not match:
+            continue
+        goal = str(match.group("goal") or "").strip(" .:-")
+        goal = re.sub(r"^(?:building|making|creating|developing)\s+", "", goal, flags=re.IGNORECASE)
+        if not goal:
+            continue
+        if not _APP_NOUN_PATTERN.search(goal) and "flask" not in goal.lower() and "django" not in goal.lower():
+            continue
+        return goal[:160]
+
+    if _APP_NOUN_PATTERN.search(normalized) and re.search(r"\b(build|make|create|develop)\b", normalized, re.IGNORECASE):
+        goal = re.sub(r"^(?:how\s+do\s+i\s+|how\s+to\s+)", "", normalized, flags=re.IGNORECASE)
+        goal = re.sub(r"^(?:build|make|create|develop)\s+", "", goal, flags=re.IGNORECASE).strip(" .:-")
+        return goal[:160] if goal else None
+
+    return None
+
+
+def _build_subtasks_for_goal(goal: str) -> list[str]:
+    stack_hints: list[str] = []
+    lowered = goal.lower()
+    for token in ("python", "flask", "django", "javascript", "react", "sqlite", "postgres"):
+        if token in lowered:
+            stack_hints.append(token)
+
+    stack_suffix = f" using {' + '.join(stack_hints)}" if stack_hints else ""
+    return [
+        f"Define a minimal feature scope for {goal}",
+        f"Set up the project structure and dependencies{stack_suffix}",
+        f"Implement the core functionality for {goal}",
+        "Add tests and validate the main user flow end-to-end",
+        "Prepare deployment/run instructions and polish documentation",
+    ]
 
 
 def _looks_like_cs_or_project_question(message: str) -> bool:
@@ -278,14 +337,30 @@ def _fallback_response(
     allow_web_search: bool = False,
 ) -> dict[str, Any]:
     title = _extract_task_draft_title(message)
+    build_goal = _extract_build_goal(message)
     if title:
+        goal = build_goal or title
+        subtasks = _build_subtasks_for_goal(goal) if build_goal else []
         return {
             "message": f"Created a task draft for: {title}",
             "action": "create_task",
             "task": {
                 "title": title,
                 "notes": "Created via chatbot fallback",
-                "subtasks": [],
+                "subtasks": subtasks,
+                "list_name": "General",
+            },
+        }
+
+    if build_goal:
+        task_title = f"Build {build_goal}" if not build_goal.lower().startswith("build ") else build_goal
+        return {
+            "message": f"Created build plan task for: {build_goal}",
+            "action": "create_task",
+            "task": {
+                "title": task_title[:160],
+                "notes": "Generated from build-application request",
+                "subtasks": _build_subtasks_for_goal(build_goal),
                 "list_name": "General",
             },
         }
@@ -365,6 +440,9 @@ def generate_response(
         "task (object when action=create_task). "
         "If action=create_task include task.title, task.notes, task.subtasks (array of strings), "
         "task.list_name. Keep concise.\n"
+        "If the user asks how to build/make/create an app, application, website, API, or game, "
+        "set action=create_task and generate 4-6 practical subtasks.\n"
+        "Treat requests like 'set tasks for making flappy bird python flask browser game' as create_task intents.\n"
         "For CS/project questions, provide clear conceptual help and short syntax examples when useful.\n"
         "For unrelated topics, ask web-search permission before browsing.\n"
         f"User message: {message}\n"

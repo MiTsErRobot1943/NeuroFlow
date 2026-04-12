@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import sqlite3
 from typing import Any
 
@@ -11,6 +12,16 @@ def _connect(db_path: str) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def _normalize_iso_date(value: str | None, field_name: str) -> str | None:
+    clean_value = (value or "").strip()
+    if not clean_value:
+        return None
+    try:
+        return dt.date.fromisoformat(clean_value).isoformat()
+    except ValueError as exc:
+        raise ValueError(f"{field_name} must be in YYYY-MM-DD format") from exc
 
 
 def ensure_default_list(user_id: int, db_path: str) -> dict[str, Any]:
@@ -88,6 +99,7 @@ def create_task(
     subtasks: list[str],
     db_path: str,
     source: str = "manual",
+    due_date: str | None = None,
 ) -> dict[str, Any]:
     clean_title = (title or "").strip()
     if not clean_title:
@@ -95,29 +107,35 @@ def create_task(
 
     selected_list_id = _resolve_list_id(user_id, list_id, db_path)
     clean_subtasks = [item.strip() for item in subtasks if (item or "").strip()]
+    normalized_due_date = _normalize_iso_date(due_date, "due_date")
+    created_task_id = 0
 
     conn = _connect(db_path)
     try:
         cursor = conn.execute(
             """
-            INSERT INTO tasks (user_id, list_id, title, notes, done, source)
-            VALUES (?, ?, ?, ?, 0, ?)
+            INSERT INTO tasks (user_id, list_id, title, notes, done, source, due_date)
+            VALUES (?, ?, ?, ?, 0, ?, ?)
             """,
-            (user_id, selected_list_id, clean_title, (notes or "").strip(), source),
+            (user_id, selected_list_id, clean_title, (notes or "").strip(), source, normalized_due_date),
         )
-        task_id = cursor.lastrowid
+        created_task_id = int(cursor.lastrowid or 0)
+        if created_task_id <= 0:
+            raise RuntimeError("Failed to create task")
 
         for subtask_title in clean_subtasks:
             conn.execute(
                 "INSERT INTO subtasks (task_id, title, done) VALUES (?, ?, 0)",
-                (task_id, subtask_title),
+                (created_task_id, subtask_title),
             )
 
         conn.commit()
     finally:
         conn.close()
 
-    return get_task(user_id, task_id, db_path)
+    if created_task_id <= 0:
+        raise RuntimeError("Failed to create task")
+    return get_task(user_id, created_task_id, db_path)
 
 
 def get_task(user_id: int, task_id: int, db_path: str) -> dict[str, Any]:
@@ -125,7 +143,7 @@ def get_task(user_id: int, task_id: int, db_path: str) -> dict[str, Any]:
     try:
         row = conn.execute(
             """
-            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.created_at, tl.name AS list_name
+            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.due_date, t.created_at, tl.name AS list_name
             FROM tasks t
             JOIN task_lists tl ON tl.id = t.list_id
             WHERE t.id = ? AND t.user_id = ?
@@ -151,6 +169,7 @@ def get_task(user_id: int, task_id: int, db_path: str) -> dict[str, Any]:
             "list_id": row["list_id"],
             "list_name": row["list_name"],
             "source": row["source"],
+            "due_date": row["due_date"],
             "created_at": row["created_at"],
             "subtasks": subtasks,
         }
@@ -163,7 +182,7 @@ def list_tasks(user_id: int, db_path: str) -> list[dict[str, Any]]:
     try:
         rows = conn.execute(
             """
-            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.created_at, tl.name AS list_name
+            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.due_date, t.created_at, tl.name AS list_name
             FROM tasks t
             JOIN task_lists tl ON tl.id = t.list_id
             WHERE t.user_id = ?
@@ -197,6 +216,7 @@ def list_tasks(user_id: int, db_path: str) -> list[dict[str, Any]]:
                     "list_id": row["list_id"],
                     "list_name": row["list_name"],
                     "source": row["source"],
+                    "due_date": row["due_date"],
                     "created_at": row["created_at"],
                     "subtasks": subtasks_by_task.get(row["id"], []),
                 }
@@ -348,6 +368,7 @@ def save_project_profile(user_id: int, payload: dict[str, str], db_path: str) ->
     language_framework = (payload.get("language_framework") or "").strip()
     time_management_style = (payload.get("time_management_style") or "structured").strip()
     memory_style = (payload.get("memory_style") or "mixed").strip()
+    target_deadline = _normalize_iso_date(payload.get("target_deadline"), "target_deadline")
 
     web_exp = (payload.get("web_experience") or experience_level).strip()
     desktop_exp = (payload.get("desktop_experience") or experience_level).strip()
@@ -359,7 +380,8 @@ def save_project_profile(user_id: int, payload: dict[str, str], db_path: str) ->
         f"experience_level={experience_level}; "
         f"language_framework={language_framework}; "
         f"time_management_style={time_management_style}; "
-        f"memory_style={memory_style}"
+        f"memory_style={memory_style}; "
+        f"target_deadline={target_deadline or 'none'}"
     )
     stored_notes = f"{notes}\n\nPlanner metadata: {planner_metadata}".strip()
 
@@ -374,11 +396,12 @@ def save_project_profile(user_id: int, payload: dict[str, str], db_path: str) ->
                 desktop_experience,
                 architecture_experience,
                 database_experience,
+                target_deadline,
                 notes
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, project_name, web_exp, desktop_exp, architecture_exp, db_exp, stored_notes),
+            (user_id, project_name, web_exp, desktop_exp, architecture_exp, db_exp, target_deadline, stored_notes),
         )
         conn.commit()
         return {
@@ -389,6 +412,7 @@ def save_project_profile(user_id: int, payload: dict[str, str], db_path: str) ->
             "language_framework": language_framework,
             "time_management_style": time_management_style,
             "memory_style": memory_style,
+            "target_deadline": target_deadline,
             "web_experience": web_exp,
             "desktop_experience": desktop_exp,
             "architecture_experience": architecture_exp,

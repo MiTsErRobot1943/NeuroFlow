@@ -6,6 +6,7 @@ Handles mode-aware settings (dev/web/desktop), database paths, and server initia
 
 import os
 import secrets
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -14,7 +15,17 @@ from src.logging_config import setup_logger
 
 logger = setup_logger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+def _resolve_base_dir() -> Path:
+    """Resolve project/data root for source and frozen (PyInstaller) execution."""
+    if getattr(sys, "frozen", False):
+        meipass_dir = getattr(sys, "_MEIPASS", None)
+        if meipass_dir:
+            return Path(str(meipass_dir))
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[1]
+
+
+BASE_DIR = _resolve_base_dir()
 DEFAULT_DB_PATH = BASE_DIR / "data" / "neuroflow.db"
 
 
@@ -101,6 +112,11 @@ def load_runtime_config(mode: Optional[str] = None) -> RuntimeConfig:
     if configured_db:
         db_path = Path(configured_db)
         logger.debug(f"Using configured DB path: {db_path}")
+    elif resolved_mode == "desktop":
+        desktop_data = _desktop_data_dir()
+        desktop_data.mkdir(parents=True, exist_ok=True)
+        db_path = desktop_data / "neuroflow.db"
+        logger.debug(f"Using desktop DB path: {db_path}")
     else:
         db_path = DEFAULT_DB_PATH
         logger.debug(f"Using shared default DB path: {db_path}")

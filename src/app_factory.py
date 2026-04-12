@@ -6,6 +6,7 @@ plus centralized route registration and security middleware.
 """
 
 import secrets
+from datetime import date, timedelta
 from typing import Optional
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
@@ -59,8 +60,8 @@ def create_app(mode: Optional[str] = None, init_db: bool = True) -> Flask:
 
     app = Flask(
         __name__,
-        template_folder=str(BASE_DIR / "Template"),
-        static_folder=str(BASE_DIR / "Template"),
+        template_folder=str(BASE_DIR / "src" / "assets" / "templates"),
+        static_folder=str(BASE_DIR / "src" / "assets" / "templates"),
         static_url_path="/static",
     )
     app.config.update(
@@ -226,6 +227,37 @@ def _create_project_tasks_from_template(template_name: str) -> tuple[str, list[d
         ),
     }
     return templates.get(template_name, templates["web"])
+
+
+def _normalize_iso_date(value: object) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    return date.fromisoformat(text).isoformat()
+
+
+def _plan_task_deadlines(task_defs: list[dict[str, object]], target_deadline: str | None) -> list[str | None]:
+    if not task_defs:
+        return []
+    if not target_deadline:
+        return [None for _ in task_defs]
+
+    target = date.fromisoformat(target_deadline)
+    today = date.today()
+    total = len(task_defs)
+    day_span = max((target - today).days, 0)
+
+    if total == 1:
+        return [target.isoformat()]
+
+    scheduled: list[str] = []
+    for index in range(total):
+        offset = round(day_span * ((index + 1) / total))
+        scheduled_date = today + timedelta(days=max(0, offset))
+        if scheduled_date > target:
+            scheduled_date = target
+        scheduled.append(scheduled_date.isoformat())
+    return scheduled
 
 
 def register_routes(app: Flask) -> None:
@@ -482,19 +514,24 @@ def register_routes(app: Flask) -> None:
         list_id = payload.get("list_id")
         subtasks = payload.get("subtasks", [])
         source = str(payload.get("source", "manual"))
+        due_date = payload.get("due_date")
 
         if not isinstance(subtasks, list):
             return _json_error("Subtasks must be an array")
 
-        created = create_task(
-            user_id=user_id,
-            title=title,
-            list_id=int(str(list_id)) if list_id not in (None, "") else None,
-            notes=notes,
-            subtasks=[str(item) for item in subtasks],
-            db_path=app.config["NEUROFLOW_DB_PATH"],
-            source=source,
-        )
+        try:
+            created = create_task(
+                user_id=user_id,
+                title=title,
+                list_id=int(str(list_id)) if list_id not in (None, "") else None,
+                notes=notes,
+                subtasks=[str(item) for item in subtasks],
+                db_path=app.config["NEUROFLOW_DB_PATH"],
+                source=source,
+                due_date=str(due_date).strip() if due_date not in (None, "") else None,
+            )
+        except ValueError as exc:
+            return _json_error(str(exc), 400)
         track_event(app.config.get("ANALYTICS_DATABASE_URL"), "task_created", session.get("username", "user"), {"task_id": created["id"], "source": source})
         return jsonify({"ok": True, "task": created})
 
@@ -615,12 +652,17 @@ def register_routes(app: Flask) -> None:
 
         payload = request.get_json(silent=True) or {}
         template_name = str(payload.get("template", "web")).strip().lower()
+        try:
+            target_deadline = _normalize_iso_date(payload.get("target_deadline"))
+        except ValueError:
+            return _json_error("target_deadline must be in YYYY-MM-DD format", 400)
         list_name, task_defs = _create_project_tasks_from_template(template_name)
+        planned_deadlines = _plan_task_deadlines(task_defs, target_deadline)
 
         db_path = app.config["NEUROFLOW_DB_PATH"]
         selected_list = create_task_list(user_id, list_name, db_path)
         created_tasks = []
-        for item in task_defs:
+        for item, planned_due_date in zip(task_defs, planned_deadlines):
             raw_subtasks = item.get("subtasks", [])
             if not isinstance(raw_subtasks, list):
                 raw_subtasks = []
@@ -633,6 +675,7 @@ def register_routes(app: Flask) -> None:
                     subtasks=[str(sub) for sub in raw_subtasks],
                     db_path=db_path,
                     source=f"template:{template_name}",
+                    due_date=planned_due_date,
                 )
             )
 
@@ -640,7 +683,12 @@ def register_routes(app: Flask) -> None:
             app.config.get("ANALYTICS_DATABASE_URL"),
             "predefined_project_generated",
             session.get("username", "user"),
-            {"template": template_name, "project_name": list_name, "task_count": len(created_tasks)},
+            {
+                "template": template_name,
+                "project_name": list_name,
+                "task_count": len(created_tasks),
+                "target_deadline": target_deadline,
+            },
         )
 
         return jsonify({"ok": True, "list": selected_list, "created_tasks": created_tasks})
@@ -654,7 +702,10 @@ def register_routes(app: Flask) -> None:
             return _json_error("Invalid request token", 403)
 
         payload = request.get_json(silent=True) or {}
-        profile = save_project_profile(user_id, payload, app.config["NEUROFLOW_DB_PATH"])
+        try:
+            profile = save_project_profile(user_id, payload, app.config["NEUROFLOW_DB_PATH"])
+        except ValueError as exc:
+            return _json_error(str(exc), 400)
         username = session.get("username", "user")
         past_projects = list_recent_projects(
             app.config.get("ANALYTICS_DATABASE_URL"),
@@ -671,7 +722,10 @@ def register_routes(app: Flask) -> None:
         selected_list = create_task_list(user_id, list_name, db_path)
 
         created_tasks = []
-        for item in generated_plan.get("tasks", []):
+        generated_tasks = [item for item in generated_plan.get("tasks", []) if isinstance(item, dict)]
+        planned_deadlines = _plan_task_deadlines(generated_tasks, profile.get("target_deadline"))
+
+        for item, planned_due_date in zip(generated_tasks, planned_deadlines):
             raw_subtasks = item.get("subtasks", []) if isinstance(item, dict) else []
             if not isinstance(raw_subtasks, list):
                 raw_subtasks = []
@@ -685,6 +739,7 @@ def register_routes(app: Flask) -> None:
                     subtasks=[str(sub) for sub in raw_subtasks if str(sub).strip()],
                     db_path=db_path,
                     source="project-config-ai",
+                    due_date=planned_due_date,
                 )
             )
 
@@ -697,6 +752,7 @@ def register_routes(app: Flask) -> None:
                 "project_type": profile.get("project_type", ""),
                 "experience_level": profile.get("experience_level", ""),
                 "language_framework": profile.get("language_framework", ""),
+                "target_deadline": profile.get("target_deadline", ""),
                 "task_count": len(created_tasks),
             },
         )

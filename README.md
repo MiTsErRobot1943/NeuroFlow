@@ -7,6 +7,16 @@ NeuroFlow supports both:
 
 The app now uses an app-factory pattern (`src/app_factory.py`) so startup initialization is explicit per runtime mode.
 
+## Project Layout
+
+- `src/` application code
+- `src/assets/templates/` HTML/CSS/JS templates and static files
+- `src/assets/schema.sql` SQLite schema
+- `scripts/runtime/` canonical Python runtime entrypoints
+- `docs/` project documentation and setup notes
+
+Root-level launchers like `run_web.py` and `run_desktop.py` are kept as compatibility wrappers.
+
 ## Runtime Modes
 
 - `dev`: local development defaults.
@@ -97,4 +107,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1
 ```
 
 Build output is written to `dist\NeuroFlowDesktop\`.
+
+The packaged desktop app now resolves bundled `src/assets/templates/` and `src/assets/schema.sql` assets at runtime,
+and stores user data in `%APPDATA%\NeuroFlow\neuroflow.db` by default (unless `NEUROFLOW_DB_PATH` is set).
+
+## Deadline Planning
+
+- Manual task creation supports an optional calendar deadline (`due_date`).
+- Predefined project templates support an optional project target deadline and automatically spread task due dates toward that target.
+- Custom project configuration also accepts a target deadline and applies planned due dates to generated tasks.
 

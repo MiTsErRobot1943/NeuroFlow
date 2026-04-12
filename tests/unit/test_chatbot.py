@@ -72,6 +72,21 @@ class TestFallbackResponse(unittest.TestCase):
         self.assertIn("list_name", task)
         self.assertIsInstance(task["subtasks"], list)
 
+    def test_build_request_creates_task_with_subtasks(self):
+        """Build-style asks should create a task and include generated subtasks."""
+        result = _fallback_response("how to build a flask web app", [])
+        self.assertEqual(result["action"], "create_task")
+        self.assertTrue(result["task"]["title"].lower().startswith("build "))
+        self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
+
+    def test_set_tasks_for_making_phrase_creates_subtasks(self):
+        """Quoted phrasing should map to create_task and produce a practical task breakdown."""
+        message = "set tasks for making flappy bird python flask browser game"
+        result = _fallback_response(message, [])
+        self.assertEqual(result["action"], "create_task")
+        self.assertIn("flappy bird", result["task"]["title"].lower())
+        self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
+
 
 class TestCoerceResponse(unittest.TestCase):
     """Unit tests for _coerce_response."""

@@ -21,6 +21,7 @@ from src.services.task_store import (
     list_chat_history,
     list_task_lists,
     list_tasks,
+    save_project_profile,
     set_subtask_done,
     set_task_done,
 )
@@ -117,6 +118,30 @@ class TestCreateTask(TaskStoreTestBase):
         with self.assertRaises(ValueError):
             create_task(self.user_id, "", lst["id"], "", [], self.db_path)
 
+    def test_create_task_with_due_date(self):
+        task = create_task(
+            user_id=self.user_id,
+            title="Ship release",
+            list_id=self._make_list("Release")["id"],
+            notes="",
+            subtasks=[],
+            db_path=self.db_path,
+            due_date="2026-05-01",
+        )
+        self.assertEqual(task["due_date"], "2026-05-01")
+
+    def test_create_task_invalid_due_date_raises(self):
+        with self.assertRaises(ValueError):
+            create_task(
+                user_id=self.user_id,
+                title="Invalid date task",
+                list_id=self._make_list("Release")["id"],
+                notes="",
+                subtasks=[],
+                db_path=self.db_path,
+                due_date="05/01/2026",
+            )
+
     def test_get_task_by_id(self):
         original = self._make_task("Fetch me")
         fetched = get_task(self.user_id, original["id"], self.db_path)
@@ -173,8 +198,9 @@ class TestSubtasks(TaskStoreTestBase):
     def test_all_subtasks_done_marks_task_done(self):
         task = self._make_task("Parent", subtasks=["A", "B"])
         for sub in task["subtasks"]:
-            result = set_subtask_done(self.user_id, sub["id"], True, self.db_path)
-        self.assertTrue(result["done"])
+            set_subtask_done(self.user_id, sub["id"], True, self.db_path)
+        final_task = get_task(self.user_id, task["id"], self.db_path)
+        self.assertTrue(final_task["done"])
 
 
 class TestDeleteTask(TaskStoreTestBase):
@@ -220,6 +246,30 @@ class TestChatHistory(TaskStoreTestBase):
         history = list_chat_history(self.user_id, self.db_path)
         self.assertEqual(history[0]["message"], "First")
         self.assertEqual(history[1]["message"], "Second")
+
+
+class TestProjectProfileDeadlines(TaskStoreTestBase):
+    def test_save_project_profile_with_target_deadline(self):
+        profile = save_project_profile(
+            self.user_id,
+            {
+                "project_name": "Deadline project",
+                "target_deadline": "2026-06-30",
+            },
+            self.db_path,
+        )
+        self.assertEqual(profile["target_deadline"], "2026-06-30")
+
+    def test_save_project_profile_invalid_target_deadline_raises(self):
+        with self.assertRaises(ValueError):
+            save_project_profile(
+                self.user_id,
+                {
+                    "project_name": "Bad deadline",
+                    "target_deadline": "30-06-2026",
+                },
+                self.db_path,
+            )
 
 
 if __name__ == "__main__":

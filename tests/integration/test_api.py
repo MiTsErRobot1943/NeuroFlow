@@ -321,11 +321,15 @@ class TestTasksApi(ApiTestBase):
 
     def test_create_and_list_task(self):
         self._login()
-        resp = self._json_post("/api/tasks", {"title": "Integration task", "notes": "some notes"})
+        resp = self._json_post(
+            "/api/tasks",
+            {"title": "Integration task", "notes": "some notes", "due_date": "2026-05-15"},
+        )
         self.assertEqual(resp.status_code, 200)
         body = resp.get_json()
         self.assertTrue(body["ok"])
         self.assertEqual(body["task"]["title"], "Integration task")
+        self.assertEqual(body["task"]["due_date"], "2026-05-15")
 
         list_resp = self.client.get("/api/tasks")
         self.assertEqual(list_resp.status_code, 200)
@@ -334,20 +338,23 @@ class TestTasksApi(ApiTestBase):
 
     def test_create_task_without_title_rejected(self):
         self._login()
-        # The route calls create_task which raises ValueError for empty title;
-        # Flask propagates this in testing mode.
-        with self.assertRaises(ValueError):
-            self._json_post("/api/tasks", {"title": ""})
+        resp = self._json_post("/api/tasks", {"title": ""})
+        self.assertEqual(resp.status_code, 400)
 
     def test_create_task_without_title_returns_500_non_testing_mode(self):
-        """In non-testing mode Flask returns a 500 for unhandled ValueError."""
+        """Validation now returns a user-facing 400 instead of an unhandled 500."""
         self.app.testing = False
         try:
             self._login()
             resp = self._json_post("/api/tasks", {"title": ""})
-            self.assertEqual(resp.status_code, 500)
+            self.assertEqual(resp.status_code, 400)
         finally:
             self.app.testing = True
+
+    def test_create_task_invalid_due_date_rejected(self):
+        self._login()
+        resp = self._json_post("/api/tasks", {"title": "Bad date", "due_date": "15-05-2026"})
+        self.assertEqual(resp.status_code, 400)
 
     def test_set_task_done(self):
         self._login()
@@ -479,11 +486,15 @@ class TestPredefinedProjectApi(ApiTestBase):
 
     def test_predefined_project_web_template(self):
         self._login()
-        resp = self._json_post("/api/projects/predefined", {"template": "web"})
+        resp = self._json_post(
+            "/api/projects/predefined",
+            {"template": "web", "target_deadline": "2026-07-01"},
+        )
         self.assertEqual(resp.status_code, 200)
         body = resp.get_json()
         self.assertTrue(body["ok"])
         self.assertGreater(len(body["created_tasks"]), 0)
+        self.assertTrue(any(task.get("due_date") for task in body["created_tasks"]))
 
     def test_predefined_project_unknown_template_falls_back_to_web(self):
         """Unknown template names should silently use the web template."""
@@ -505,6 +516,7 @@ class TestConfigureProjectApi(ApiTestBase):
         self._login()
         payload = {
             "project_name": "My App",
+            "target_deadline": "2026-08-15",
             "web_experience": "intermediate",
             "desktop_experience": "beginner",
             "architecture_experience": "advanced",
@@ -516,6 +528,7 @@ class TestConfigureProjectApi(ApiTestBase):
         body = resp.get_json()
         self.assertTrue(body["ok"])
         self.assertGreater(len(body["created_tasks"]), 0)
+        self.assertEqual(body["profile"]["target_deadline"], "2026-08-15")
 
 
 if __name__ == "__main__":

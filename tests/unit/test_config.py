@@ -58,7 +58,7 @@ class TestLoadRuntimeConfig(unittest.TestCase):
 
     def tearDown(self):
         self.temp_dir.cleanup()
-        for key in ("NEUROFLOW_MODE", "NEUROFLOW_DB_PATH", "PORT", "NEUROFLOW_SECRET_KEY"):
+        for key in ("NEUROFLOW_MODE", "NEUROFLOW_DB_PATH", "PORT", "NEUROFLOW_SECRET_KEY", "APPDATA"):
             os.environ.pop(key, None)
 
     def test_dev_mode_debug_is_true(self):
@@ -95,6 +95,12 @@ class TestLoadRuntimeConfig(unittest.TestCase):
         cfg = load_runtime_config("dev")
         self.assertEqual(str(cfg.db_path), custom_path)
 
+    def test_desktop_db_defaults_to_appdata(self):
+        appdata_dir = os.path.join(self.temp_dir.name, "AppData", "Roaming")
+        os.environ["APPDATA"] = appdata_dir
+        cfg = load_runtime_config("desktop")
+        self.assertTrue(str(cfg.db_path).endswith(os.path.join("NeuroFlow", "neuroflow.db")))
+
     def test_secret_key_from_env(self):
         os.environ["NEUROFLOW_SECRET_KEY"] = "my-secret"
         cfg = load_runtime_config("dev")
@@ -110,7 +116,7 @@ class TestLoadRuntimeConfig(unittest.TestCase):
         """RuntimeConfig is a frozen dataclass; attribute assignment must fail."""
         cfg = load_runtime_config("dev")
         with self.assertRaises((AttributeError, TypeError)):
-            cfg.mode = "web"  # type: ignore[misc]
+            setattr(cfg, "mode", "web")
 
 
 if __name__ == "__main__":
