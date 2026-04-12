@@ -5,10 +5,13 @@ Provides backend startup, health checks, and pywebview window integration for de
 """
 
 import contextlib
+import ctypes
 import os
+import shutil
 import socket
 import threading
 import time
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any, Optional
 from urllib.request import urlopen
@@ -30,6 +33,10 @@ from src.constants import (
 from src.logging_config import setup_logger
 
 logger = setup_logger(__name__)
+
+MIN_LOCAL_AI_CPU_CORES = 4
+MIN_LOCAL_AI_RAM_GB = 8
+MIN_LOCAL_AI_FREE_DISK_GB = 10
 
 
 def _configure_analytics_for_desktop() -> None:
@@ -57,6 +64,85 @@ def _configure_analytics_for_desktop() -> None:
     # Set environment variable for Flask app to pick up
     os.environ["ANALYTICS_DATABASE_URL"] = analytics_url
     logger.info(f"Desktop analytics configured: {analytics_host}:{analytics_port}/{analytics_db}")
+
+
+def _total_ram_gb() -> float | None:
+    if os.name == "nt":
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        status = MEMORYSTATUSEX()
+        status.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        global_memory_status_ex = getattr(kernel32, "GlobalMemoryStatusEx", None)
+        if global_memory_status_ex and global_memory_status_ex(ctypes.byref(status)):
+            return round(status.ullTotalPhys / (1024 ** 3), 2)
+        return None
+
+    try:
+        pages = os.sysconf("SC_PHYS_PAGES")
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        return round((pages * page_size) / (1024 ** 3), 2)
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def evaluate_local_ai_hardware() -> dict[str, Any]:
+    """Assess whether the machine meets baseline local-model recommendations."""
+    cpu_cores = int(os.cpu_count() or 0)
+    ram_gb = _total_ram_gb()
+    disk_usage = shutil.disk_usage(str(Path.home()))
+    free_bytes = disk_usage.free if hasattr(disk_usage, "free") else disk_usage[2]
+    free_disk_gb = round(free_bytes / (1024 ** 3), 2)
+
+    issues: list[str] = []
+    if cpu_cores < MIN_LOCAL_AI_CPU_CORES:
+        issues.append(f"CPU cores below recommended minimum ({cpu_cores} < {MIN_LOCAL_AI_CPU_CORES})")
+    if ram_gb is not None and ram_gb < MIN_LOCAL_AI_RAM_GB:
+        issues.append(f"RAM below recommended minimum ({ram_gb:.1f} GB < {MIN_LOCAL_AI_RAM_GB} GB)")
+    if free_disk_gb < MIN_LOCAL_AI_FREE_DISK_GB:
+        issues.append(
+            f"Free disk below recommended minimum ({free_disk_gb:.1f} GB < {MIN_LOCAL_AI_FREE_DISK_GB} GB)"
+        )
+
+    return {
+        "meets_recommendation": not issues,
+        "cpu_cores": cpu_cores,
+        "ram_gb": ram_gb,
+        "free_disk_gb": free_disk_gb,
+        "issues": issues,
+    }
+
+
+def _log_local_ai_hardware_check() -> None:
+    if os.getenv("NEUROFLOW_CHECK_LOCAL_AI_HARDWARE", "1").strip() in {"0", "false", "False", "no", "off"}:
+        return
+
+    report = evaluate_local_ai_hardware()
+    if report["meets_recommendation"]:
+        logger.info(
+            "Local AI hardware check passed (CPU=%s cores, RAM=%s GB, free_disk=%s GB)",
+            report["cpu_cores"],
+            report["ram_gb"],
+            report["free_disk_gb"],
+        )
+        return
+
+    logger.warning(
+        "Local AI hardware check warning: %s. Local models may run slowly or fail; "
+        "consider a smaller model or remote endpoint.",
+        "; ".join(report["issues"]),
+    )
 
 
 
@@ -114,6 +200,8 @@ def start_desktop_backend(
     """
     selected_port = port or _pick_open_port(host)
     logger.info(f"Starting desktop backend on {host}:{selected_port}")
+
+    _log_local_ai_hardware_check()
 
     # Configure analytics database for desktop mode
     _configure_analytics_for_desktop()

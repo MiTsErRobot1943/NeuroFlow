@@ -9,7 +9,7 @@ is not required.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.services.analytics_store import initialize_analytics_database, track_event
+from src.services.analytics_store import get_user_feedback_context, initialize_analytics_database, track_event
 
 
 class TestInitializeAnalyticsDatabase(unittest.TestCase):
@@ -111,6 +111,57 @@ class TestTrackEvent(unittest.TestCase):
         args = mock_cursor.execute.call_args[0]
         # Third parameter should be serialised as '{}'
         self.assertIn("{}", args[1][2])
+
+
+class TestFeedbackContext(unittest.TestCase):
+    """Unit tests for get_user_feedback_context."""
+
+    def test_returns_empty_context_without_database_url(self):
+        context = get_user_feedback_context(None, "alice")
+        self.assertEqual(context["chatbot"]["top_intents"], [])
+        self.assertEqual(context["tasks"]["completed_count"], 0)
+
+    def test_aggregates_intents_actions_and_completion_metrics(self):
+        rows = [
+            (
+                "chatbot_interaction",
+                {
+                    "intent_tags": ["learning", "task_planning"],
+                    "action": "create_task",
+                    "query_token_count": 12,
+                },
+            ),
+            (
+                "chatbot_interaction",
+                {
+                    "intent_tags": ["learning"],
+                    "action": "none",
+                    "query_token_count": 8,
+                },
+            ),
+            ("task_completion", {"completion_minutes": 20.0}),
+            ("task_completion", {"completion_minutes": 40.0}),
+        ]
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = rows
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_psycopg2 = MagicMock()
+        mock_psycopg2.connect.return_value = mock_conn
+
+        with patch("src.services.analytics_store.psycopg2", mock_psycopg2):
+            context = get_user_feedback_context("postgresql://localhost/test", "alice")
+
+        self.assertIn("learning", context["chatbot"]["top_intents"])
+        self.assertEqual(context["chatbot"]["action_counts"].get("create_task"), 1)
+        self.assertEqual(context["chatbot"]["avg_query_tokens"], 10.0)
+        self.assertEqual(context["tasks"]["completed_count"], 2)
+        self.assertEqual(context["tasks"]["median_completion_minutes"], 30.0)
 
 
 if __name__ == "__main__":

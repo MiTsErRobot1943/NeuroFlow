@@ -143,7 +143,7 @@ def get_task(user_id: int, task_id: int, db_path: str) -> dict[str, Any]:
     try:
         row = conn.execute(
             """
-            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.due_date, t.created_at, tl.name AS list_name
+            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.due_date, t.created_at, t.updated_at, tl.name AS list_name
             FROM tasks t
             JOIN task_lists tl ON tl.id = t.list_id
             WHERE t.id = ? AND t.user_id = ?
@@ -171,6 +171,7 @@ def get_task(user_id: int, task_id: int, db_path: str) -> dict[str, Any]:
             "source": row["source"],
             "due_date": row["due_date"],
             "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
             "subtasks": subtasks,
         }
     finally:
@@ -182,7 +183,7 @@ def list_tasks(user_id: int, db_path: str) -> list[dict[str, Any]]:
     try:
         rows = conn.execute(
             """
-            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.due_date, t.created_at, tl.name AS list_name
+            SELECT t.id, t.title, t.notes, t.done, t.list_id, t.source, t.due_date, t.created_at, t.updated_at, tl.name AS list_name
             FROM tasks t
             JOIN task_lists tl ON tl.id = t.list_id
             WHERE t.user_id = ?
@@ -218,6 +219,7 @@ def list_tasks(user_id: int, db_path: str) -> list[dict[str, Any]]:
                     "source": row["source"],
                     "due_date": row["due_date"],
                     "created_at": row["created_at"],
+                    "updated_at": row["updated_at"],
                     "subtasks": subtasks_by_task.get(row["id"], []),
                 }
             )

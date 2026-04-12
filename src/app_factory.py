@@ -6,7 +6,9 @@ plus centralized route registration and security middleware.
 """
 
 import secrets
-from datetime import date, timedelta
+import hashlib
+import re
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
@@ -19,6 +21,7 @@ from src.constants import (
 )
 from src.logging_config import setup_logger
 from src.services.analytics_store import initialize_analytics_database
+from src.services.analytics_store import get_user_feedback_context
 from src.services.analytics_store import list_recent_projects
 from src.services.analytics_store import track_event
 from src.services.chatbot import generate_project_plan
@@ -258,6 +261,54 @@ def _plan_task_deadlines(task_defs: list[dict[str, object]], target_deadline: st
             scheduled_date = target
         scheduled.append(scheduled_date.isoformat())
     return scheduled
+
+
+def _build_query_pattern_payload(message: str) -> dict[str, object]:
+    normalized = re.sub(r"\s+", " ", message.strip())
+    lowered = normalized.lower()
+    tokens = [piece for piece in re.split(r"\W+", lowered) if piece]
+
+    intent_tags: list[str] = []
+    if any(word in lowered for word in ("create", "add", "task", "plan", "steps")):
+        intent_tags.append("task_planning")
+    if any(word in lowered for word in ("debug", "bug", "error", "fix", "traceback")):
+        intent_tags.append("debugging")
+    if any(word in lowered for word in ("how", "explain", "what", "why", "example")):
+        intent_tags.append("learning")
+    if any(word in lowered for word in ("search", "web", "google", "online")):
+        intent_tags.append("web_lookup")
+    if any(word in lowered for word in ("snippet", "syntax", "code")):
+        intent_tags.append("code_snippet")
+
+    fingerprint = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16] if normalized else ""
+    return {
+        "query_token_count": len(tokens),
+        "query_char_count": len(normalized),
+        "query_fingerprint": fingerprint,
+        "intent_tags": intent_tags,
+    }
+
+
+def _parse_sqlite_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    candidate = text.replace(" ", "T")
+    try:
+        return datetime.fromisoformat(candidate)
+    except ValueError:
+        return None
+
+
+def _completion_minutes_for_task(task: dict[str, object]) -> float | None:
+    completed_at = _parse_sqlite_timestamp(task.get("updated_at"))
+    created_at = _parse_sqlite_timestamp(task.get("created_at"))
+    if not created_at or not completed_at:
+        return None
+    delta_minutes = (completed_at - created_at).total_seconds() / 60.0
+    if delta_minutes < 0:
+        return None
+    return round(delta_minutes, 2)
 
 
 def register_routes(app: Flask) -> None:
@@ -545,6 +596,18 @@ def register_routes(app: Flask) -> None:
 
         payload = request.get_json(silent=True) or {}
         task = set_task_done(user_id, task_id, bool(payload.get("done", False)), app.config["NEUROFLOW_DB_PATH"])
+
+        track_event(
+            app.config.get("ANALYTICS_DATABASE_URL"),
+            "task_completion",
+            session.get("username", "user"),
+            {
+                "task_id": task.get("id"),
+                "done": bool(task.get("done", False)),
+                "source": task.get("source", "manual"),
+                "completion_minutes": _completion_minutes_for_task(task) if bool(task.get("done", False)) else None,
+            },
+        )
         return jsonify({"ok": True, "task": task})
 
     @app.route("/api/subtasks/<int:subtask_id>/done", methods=["POST"])
@@ -557,6 +620,16 @@ def register_routes(app: Flask) -> None:
 
         payload = request.get_json(silent=True) or {}
         task = set_subtask_done(user_id, subtask_id, bool(payload.get("done", False)), app.config["NEUROFLOW_DB_PATH"])
+        track_event(
+            app.config.get("ANALYTICS_DATABASE_URL"),
+            "subtask_completion",
+            session.get("username", "user"),
+            {
+                "subtask_id": subtask_id,
+                "task_id": task.get("id"),
+                "done": bool(payload.get("done", False)),
+            },
+        )
         return jsonify({"ok": True, "task": task})
 
     @app.route("/api/tasks/<int:task_id>/subtasks", methods=["POST"])
@@ -605,11 +678,16 @@ def register_routes(app: Flask) -> None:
 
         tasks_snapshot = list_tasks(user_id, db_path)
         profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else None
+        feedback_context = get_user_feedback_context(
+            app.config.get("ANALYTICS_DATABASE_URL"),
+            session.get("username", "user"),
+        )
         chatbot_response = generate_response(
             message=message,
             tasks=tasks_snapshot,
             profile=profile,
             allow_web_search=allow_web_search,
+            feedback_context=feedback_context,
         )
 
         created_task = None
@@ -638,6 +716,7 @@ def register_routes(app: Flask) -> None:
                 "action": chatbot_response.get("action", "none"),
                 "created_task": bool(created_task),
                 "allow_web_search": allow_web_search,
+                **_build_query_pattern_payload(message),
             },
         )
         return jsonify({"ok": True, "response": chatbot_response, "created_task": created_task})
@@ -713,7 +792,11 @@ def register_routes(app: Flask) -> None:
             limit=6,
         )
 
-        generated_plan = generate_project_plan(profile, past_projects)
+        feedback_context = get_user_feedback_context(
+            app.config.get("ANALYTICS_DATABASE_URL"),
+            username,
+        )
+        generated_plan = generate_project_plan(profile, past_projects, feedback_context=feedback_context)
 
         db_path = app.config["NEUROFLOW_DB_PATH"]
         list_name = str(generated_plan.get("list_name") or profile.get("project_name") or "Untitled Project").strip()

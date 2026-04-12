@@ -106,10 +106,39 @@ Use the helper script to build a desktop executable:
 powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1
 ```
 
+Default build excludes the optional Ollama client to keep desktop packaging lightweight.
+
+To bundle the Ollama Python client in the executable build:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1 -IncludeOllama
+```
+
 Build output is written to `dist\NeuroFlowDesktop\`.
 
 The packaged desktop app now resolves bundled `src/assets/templates/` and `src/assets/schema.sql` assets at runtime,
 and stores user data in `%APPDATA%\NeuroFlow\neuroflow.db` by default (unless `NEUROFLOW_DB_PATH` is set).
+
+### AI Privacy Note
+
+- Using a local Ollama runtime is the most private AI mode because prompts stay on your machine.
+- If you point the app to a remote model endpoint, prompts may be processed outside your device.
+- Web search is only performed after explicit approval in chat.
+
+### Local AI Hardware Preflight
+
+Desktop startup now runs a local-model readiness check and logs a warning when the machine is below the recommended baseline:
+
+- CPU: 4+ logical cores
+- RAM: 8+ GB
+- Free disk: 10+ GB
+
+You can disable this check (not recommended) with:
+
+```powershell
+$env:NEUROFLOW_CHECK_LOCAL_AI_HARDWARE = "0"
+python run_desktop.py
+```
 
 ## Deadline Planning
 

@@ -367,6 +367,21 @@ class TestTasksApi(ApiTestBase):
         self.assertEqual(done_resp.status_code, 200)
         self.assertTrue(done_resp.get_json()["task"]["done"])
 
+    def test_set_task_done_emits_analytics_completion_payload(self):
+        self._login()
+        create_resp = self._json_post("/api/tasks", {"title": "Track completion", "notes": ""})
+        task_id = create_resp.get_json()["task"]["id"]
+
+        with patch("src.app_factory.track_event") as mock_track_event:
+            done_resp = self._json_post(f"/api/tasks/{task_id}/done", {"done": True})
+
+        self.assertEqual(done_resp.status_code, 200)
+        mock_track_event.assert_called_once()
+        _, event_type, _, payload = mock_track_event.call_args[0]
+        self.assertEqual(event_type, "task_completion")
+        self.assertTrue(payload["done"])
+        self.assertIn("completion_minutes", payload)
+
     def test_delete_task(self):
         self._login()
         create_resp = self._json_post("/api/tasks", {"title": "Deletable task", "notes": ""})
@@ -474,6 +489,22 @@ class TestChatbotApi(ApiTestBase):
                 {"message": "create task: Profile test", "profile": profile},
             )
         self.assertEqual(resp.status_code, 200)
+
+    def test_chatbot_emits_query_pattern_payload(self):
+        self._login()
+        with patch("src.app_factory.track_event") as mock_track_event:
+            with patch("src.services.chatbot.ollama", None):
+                resp = self._json_post(
+                    "/api/chatbot",
+                    {"message": "How do I debug this API error with a code snippet?"},
+                )
+
+        self.assertEqual(resp.status_code, 200)
+        mock_track_event.assert_called_once()
+        _, event_type, _, payload = mock_track_event.call_args[0]
+        self.assertEqual(event_type, "chatbot_interaction")
+        self.assertIn("intent_tags", payload)
+        self.assertGreater(payload.get("query_token_count", 0), 0)
 
 
 # ── Predefined project templates ──────────────────────────────────────────────

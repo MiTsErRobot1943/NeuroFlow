@@ -8,11 +8,11 @@ without opening a real browser window.
 import socket
 import tempfile
 import os
-import threading
-import time
 import unittest
+from unittest.mock import patch
 
 from src.desktop_launcher import (
+    evaluate_local_ai_hardware,
     _pick_open_port,
     start_desktop_backend,
     stop_desktop_backend,
@@ -60,6 +60,24 @@ class TestWaitForBackend(unittest.TestCase):
         url = f"http://127.0.0.1:{port}/health"
         with self.assertRaises(TimeoutError):
             wait_for_backend(url, timeout_seconds=0.3)
+
+
+class TestLocalAiHardwareEvaluation(unittest.TestCase):
+    def test_evaluation_returns_expected_fields(self):
+        report = evaluate_local_ai_hardware()
+        for key in ("meets_recommendation", "cpu_cores", "ram_gb", "free_disk_gb", "issues"):
+            self.assertIn(key, report)
+        self.assertIsInstance(report["issues"], list)
+
+    def test_evaluation_flags_low_spec_machine(self):
+        with patch("src.desktop_launcher.os.cpu_count", return_value=2):
+            with patch("src.desktop_launcher._total_ram_gb", return_value=4.0):
+                with patch("src.desktop_launcher.shutil.disk_usage") as mock_disk_usage:
+                    mock_disk_usage.return_value = (100, 95, 5)
+                    report = evaluate_local_ai_hardware()
+
+        self.assertFalse(report["meets_recommendation"])
+        self.assertGreaterEqual(len(report["issues"]), 1)
 
 
 class TestDesktopBackendLifecycle(unittest.TestCase):

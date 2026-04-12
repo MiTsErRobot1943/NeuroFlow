@@ -335,6 +335,7 @@ def _fallback_response(
     message: str,
     tasks: list[dict[str, Any]],
     allow_web_search: bool = False,
+    feedback_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     title = _extract_task_draft_title(message)
     build_goal = _extract_build_goal(message)
@@ -379,13 +380,28 @@ def _fallback_response(
 
 
     recent_titles = ", ".join(task["title"] for task in tasks[:3]) if tasks else "none yet"
+    feedback = feedback_context or {}
+    top_intents = feedback.get("chatbot", {}).get("top_intents", []) if isinstance(feedback, dict) else []
+    intent_hint = ""
+    if isinstance(top_intents, list) and top_intents:
+        intent_hint = f" Recent learning patterns: {', '.join(str(tag) for tag in top_intents[:2])}."
+
+    completion_hint = ""
+    median_completion = feedback.get("tasks", {}).get("median_completion_minutes") if isinstance(feedback, dict) else None
+    if isinstance(median_completion, (int, float)):
+        completion_hint = (
+            f" Typical completion pace is about {median_completion:.1f} minutes, "
+            "so I can suggest chunk sizes that match your rhythm."
+        )
+
     return {
         "message": (
             "I can help create tasks. Try: 'create task: Build API auth layer' or "
             "'set up tasks for capstone backend project'. "
             "I can also answer CS/project questions and share syntax snippets. "
             "For non-project topics, I can search the web with your permission. "
-            f"Recent tasks: {recent_titles}."
+            f"Recent tasks: {recent_titles}.{intent_hint}"
+            f"{completion_hint}"
         ),
         "action": "none",
     }
@@ -406,8 +422,14 @@ def generate_response(
     tasks: list[dict[str, Any]],
     profile: dict[str, Any] | None = None,
     allow_web_search: bool = False,
+    feedback_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    fallback = _fallback_response(message, tasks, allow_web_search=allow_web_search)
+    fallback = _fallback_response(
+        message,
+        tasks,
+        allow_web_search=allow_web_search,
+        feedback_context=feedback_context,
+    )
 
     if ollama is None:
         return fallback
@@ -445,8 +467,10 @@ def generate_response(
         "Treat requests like 'set tasks for making flappy bird python flask browser game' as create_task intents.\n"
         "For CS/project questions, provide clear conceptual help and short syntax examples when useful.\n"
         "For unrelated topics, ask web-search permission before browsing.\n"
+        "Use the analytics feedback signals to tune response style and planning granularity.\n"
         f"User message: {message}\n"
         f"Task history: {json.dumps(task_preview)}\n"
+        f"Analytics feedback signals: {json.dumps(feedback_context or {})}\n"
         f"Web search already approved for this request: {allow_web_search}\n"
         f"{profile_text}"
     )
@@ -478,7 +502,11 @@ def _normalize_plan_tasks(raw_tasks: Any) -> list[dict[str, Any]]:
     return tasks[:8]
 
 
-def _fallback_project_plan(profile: dict[str, Any], past_projects: list[dict[str, Any]]) -> dict[str, Any]:
+def _fallback_project_plan(
+    profile: dict[str, Any],
+    past_projects: list[dict[str, Any]],
+    feedback_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     project_name = str(profile.get("project_name") or "Custom Project").strip() or "Custom Project"
     project_type = str(profile.get("project_type") or "web").strip() or "web"
     experience_level = str(profile.get("experience_level") or "beginner").strip() or "beginner"
@@ -488,6 +516,15 @@ def _fallback_project_plan(profile: dict[str, Any], past_projects: list[dict[str
 
     prior_names = ", ".join(item.get("name", "") for item in past_projects[:3] if item.get("name"))
     prior_context = prior_names or "none logged yet"
+
+    completion_note = ""
+    if isinstance(feedback_context, dict):
+        median_minutes = feedback_context.get("tasks", {}).get("median_completion_minutes")
+        if isinstance(median_minutes, (int, float)):
+            completion_note = (
+                f" Recent completion median is {median_minutes:.1f} minutes; "
+                "prioritize milestone chunks close to that duration."
+            )
 
     return {
         "list_name": project_name,
@@ -506,7 +543,10 @@ def _fallback_project_plan(profile: dict[str, Any], past_projects: list[dict[str
             },
             {
                 "title": "Set up implementation baseline",
-                "notes": f"Use a {time_management_style} planning rhythm with milestones sized for weekly delivery.",
+                "notes": (
+                    f"Use a {time_management_style} planning rhythm with milestones sized for weekly delivery."
+                    f"{completion_note}"
+                ),
                 "subtasks": [
                     "Create repository structure and starter README",
                     "Configure linting/testing baseline",
@@ -538,8 +578,9 @@ def _fallback_project_plan(profile: dict[str, Any], past_projects: list[dict[str
 def generate_project_plan(
     profile: dict[str, Any],
     past_projects: list[dict[str, Any]],
+    feedback_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    fallback = _fallback_project_plan(profile, past_projects)
+    fallback = _fallback_project_plan(profile, past_projects, feedback_context=feedback_context)
     if ollama is None:
         return fallback
 
@@ -554,6 +595,7 @@ def generate_project_plan(
         "Generate 4-6 tasks ordered from planning to delivery."
         f"\nUser project profile: {json.dumps(profile)}"
         f"\nPast projects from analytics: {json.dumps(past_projects)}"
+        f"\nFeedback signals: {json.dumps(feedback_context or {})}"
     )
 
     try:

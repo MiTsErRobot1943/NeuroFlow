@@ -87,6 +87,15 @@ class TestFallbackResponse(unittest.TestCase):
         self.assertIn("flappy bird", result["task"]["title"].lower())
         self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
 
+    def test_feedback_context_is_reflected_in_hint_message(self):
+        feedback_context = {
+            "chatbot": {"top_intents": ["learning", "task_planning"]},
+            "tasks": {"median_completion_minutes": 35.0},
+        }
+        result = _fallback_response("hello there", [], feedback_context=feedback_context)
+        self.assertIn("learning", result["message"].lower())
+        self.assertIn("35.0", result["message"])
+
 
 class TestCoerceResponse(unittest.TestCase):
     """Unit tests for _coerce_response."""
@@ -150,6 +159,15 @@ class TestGenerateResponse(unittest.TestCase):
         with patch("src.services.chatbot.ollama", None):
             result = generate_response("create task: Deploy app", [], profile=profile)
         self.assertEqual(result["action"], "create_task")
+
+    def test_feedback_context_arg_accepted_without_error(self):
+        feedback = {
+            "chatbot": {"top_intents": ["learning"]},
+            "tasks": {"median_completion_minutes": 18.0},
+        }
+        with patch("src.services.chatbot.ollama", None):
+            result = generate_response("what is the weather?", [], feedback_context=feedback)
+        self.assertEqual(result["action"], "none")
 
 
 if __name__ == "__main__":
