@@ -26,7 +26,7 @@ _CREATE_TASK_BROAD_PATTERNS = [
 ]
 _BUILD_APP_INTENT_PATTERNS = [
     re.compile(
-        r"^(?:how\s+do\s+i\s+|how\s+to\s+)?(?:build|make|create|develop)\s+"
+        r"^(?:how\s+do\s+i\s+|how\s+to\s+|help\s+me\s+(?:to\s+)?)?(?:build|make|create|develop)\s+"
         r"(?:a\s+|an\s+|the\s+)?(?P<goal>.+)$",
         re.IGNORECASE,
     ),
@@ -34,6 +34,18 @@ _BUILD_APP_INTENT_PATTERNS = [
         r"^(?:set|setup|set\s+up|create|add|plan|prepare)\s+"
         r"(?:tasks?|steps?|plan)\s+(?:for|to)\s+"
         r"(?P<goal>(?:building|making|creating|developing)\s+.+)$",
+        re.IGNORECASE,
+    ),
+]
+_LEARNING_PLAN_PATTERNS = [
+    re.compile(
+        r"^(?:help\s+me\s+learn|teach\s+me|i\s+want\s+to\s+learn|learn)\s+(?P<topic>.+)$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^(?:create|add|set\s*up|setup|plan|prepare)\s+(?:a\s+|an\s+|the\s+)?"
+        r"(?:learning\s+plan|study\s+plan|study\s+tasks?|learning\s+tasks?)\s+"
+        r"(?:for\s+)?(?P<topic>.+)$",
         re.IGNORECASE,
     ),
 ]
@@ -47,6 +59,10 @@ _CODE_SNIPPET_PATTERN = re.compile(
 )
 _WEB_SEARCH_PATTERN = re.compile(
     r"\b(search\s+the\s+web|search\s+web|look\s+up|find\s+online|web\s+search|google)\b",
+    re.IGNORECASE,
+)
+_LEARNING_TOPIC_SANITIZER = re.compile(
+    r"^(?:about|for|on|to\s+learn)\s+",
     re.IGNORECASE,
 )
 
@@ -200,6 +216,32 @@ def _build_subtasks_for_goal(goal: str) -> list[str]:
     ]
 
 
+def _extract_learning_topic(message: str) -> str | None:
+    normalized = re.sub(r"\s+", " ", message.strip())
+    if not normalized:
+        return None
+
+    for pattern in _LEARNING_PLAN_PATTERNS:
+        match = pattern.match(normalized)
+        if not match:
+            continue
+        topic = str(match.group("topic") or "").strip(" .:-")
+        topic = _LEARNING_TOPIC_SANITIZER.sub("", topic).strip(" .:-")
+        if topic:
+            return topic[:120]
+    return None
+
+
+def _build_learning_subtasks(topic: str) -> list[str]:
+    return [
+        f"Define a clear learning goal for {topic}",
+        f"Set up a practice environment and starter resources for {topic}",
+        f"Learn core fundamentals of {topic} with short focused drills",
+        f"Build a mini project that applies {topic}",
+        f"Review gaps, document key takeaways, and plan the next milestone for {topic}",
+    ]
+
+
 def _looks_like_cs_or_project_question(message: str) -> bool:
     lowered = message.lower()
     return any(token in lowered for token in _CS_KEYWORDS)
@@ -336,9 +378,30 @@ def _fallback_response(
     tasks: list[dict[str, Any]],
     allow_web_search: bool = False,
     feedback_context: dict[str, Any] | None = None,
+    active_task: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     title = _extract_task_draft_title(message)
     build_goal = _extract_build_goal(message)
+    learning_topic = _extract_learning_topic(message)
+
+    active_list_name = "General"
+    if isinstance(active_task, dict):
+        active_list_name = str(active_task.get("list_name") or active_task.get("list") or "General").strip() or "General"
+
+    if learning_topic:
+        task_title = learning_topic if learning_topic.lower().startswith("learn ") else f"Learn {learning_topic}"
+        return {
+            "message": f"Created a learning plan task for: {learning_topic}",
+            "action": "create_task",
+            "start_new_session": True,
+            "task": {
+                "title": task_title[:160],
+                "notes": "Generated from learning-plan request",
+                "subtasks": _build_learning_subtasks(learning_topic),
+                "list_name": active_list_name if active_list_name else "Learning Plans",
+            },
+        }
+
     if title:
         goal = build_goal or title
         subtasks = _build_subtasks_for_goal(goal) if build_goal else []
@@ -349,7 +412,7 @@ def _fallback_response(
                 "title": title,
                 "notes": "Created via chatbot fallback",
                 "subtasks": subtasks,
-                "list_name": "General",
+                "list_name": active_list_name,
             },
         }
 
@@ -362,7 +425,7 @@ def _fallback_response(
                 "title": task_title[:160],
                 "notes": "Generated from build-application request",
                 "subtasks": _build_subtasks_for_goal(build_goal),
-                "list_name": "General",
+                "list_name": active_list_name,
             },
         }
 
@@ -423,12 +486,14 @@ def generate_response(
     profile: dict[str, Any] | None = None,
     allow_web_search: bool = False,
     feedback_context: dict[str, Any] | None = None,
+    active_task: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     fallback = _fallback_response(
         message,
         tasks,
         allow_web_search=allow_web_search,
         feedback_context=feedback_context,
+        active_task=active_task,
     )
 
     if ollama is None:
@@ -464,12 +529,15 @@ def generate_response(
         "task.list_name. Keep concise.\n"
         "If the user asks how to build/make/create an app, application, website, API, or game, "
         "set action=create_task and generate 4-6 practical subtasks.\n"
+        "Treat concise prompts like 'help me make a web app' as create_task intents and produce a practical step plan.\n"
+        "Treat learning prompts like 'help me learn JavaScript' as create_task intents with a learning plan title and step-by-step subtasks.\n"
         "Treat requests like 'set tasks for making flappy bird python flask browser game' as create_task intents.\n"
         "For CS/project questions, provide clear conceptual help and short syntax examples when useful.\n"
         "For unrelated topics, ask web-search permission before browsing.\n"
         "Use the analytics feedback signals to tune response style and planning granularity.\n"
         f"User message: {message}\n"
         f"Task history: {json.dumps(task_preview)}\n"
+        f"Active task context: {json.dumps(active_task or {})}\n"
         f"Analytics feedback signals: {json.dumps(feedback_context or {})}\n"
         f"Web search already approved for this request: {allow_web_search}\n"
         f"{profile_text}"

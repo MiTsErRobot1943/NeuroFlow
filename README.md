@@ -140,6 +140,16 @@ $env:NEUROFLOW_CHECK_LOCAL_AI_HARDWARE = "0"
 python run_desktop.py
 ```
 
+### Voice Input and Output
+
+The dashboard includes browser-native speech-to-text and text-to-speech controls for the task form and chatbot panels.
+
+- Click **🎤 Dictate** on the task title field to fill in a task by voice.
+- Click **🎤 Speak** in a chatbot panel to dictate a message and send it automatically.
+- When a task or chatbot message is created from voice input, NeuroFlow can speak back the result.
+
+Voice support depends on the browser/webview exposing the Web Speech APIs. If those APIs are unavailable, the buttons are disabled and typed input still works.
+
 ## Deadline Planning
 
 - Manual task creation supports an optional calendar deadline (`due_date`).

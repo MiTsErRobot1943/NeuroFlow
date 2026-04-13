@@ -671,12 +671,21 @@ def register_routes(app: Flask) -> None:
 
         allow_web_search = bool(payload.get("allow_web_search", False))
         skip_user_log = bool(payload.get("skip_user_log", False))
+        selected_task_id_raw = payload.get("selected_task_id")
 
         db_path = app.config["NEUROFLOW_DB_PATH"]
         if not skip_user_log:
             append_chat_message(user_id, "user", message, db_path)
 
         tasks_snapshot = list_tasks(user_id, db_path)
+        selected_task = None
+        try:
+            selected_task_id = int(str(selected_task_id_raw)) if selected_task_id_raw not in (None, "") else None
+        except ValueError:
+            selected_task_id = None
+        if selected_task_id is not None:
+            selected_task = next((task for task in tasks_snapshot if int(task.get("id", 0)) == selected_task_id), None)
+
         profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else None
         feedback_context = get_user_feedback_context(
             app.config.get("ANALYTICS_DATABASE_URL"),
@@ -688,6 +697,7 @@ def register_routes(app: Flask) -> None:
             profile=profile,
             allow_web_search=allow_web_search,
             feedback_context=feedback_context,
+            active_task=selected_task,
         )
 
         created_task = None

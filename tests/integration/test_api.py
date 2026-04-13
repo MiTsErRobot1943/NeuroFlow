@@ -464,6 +464,17 @@ class TestChatbotApi(ApiTestBase):
         self.assertEqual(body["response"]["action"], "none")
         self.assertIsNone(body["created_task"])
 
+    def test_chatbot_learning_prompt_creates_task_and_new_session_hint(self):
+        self._login()
+        with patch("src.services.chatbot.ollama", None):
+            resp = self._json_post("/api/chatbot", {"message": "Help me learn JavaScript"})
+        self.assertEqual(resp.status_code, 200)
+        body = resp.get_json()
+        self.assertEqual(body["response"]["action"], "create_task")
+        self.assertTrue(body["response"].get("start_new_session"))
+        self.assertIsNotNone(body["created_task"])
+        self.assertTrue(str(body["created_task"]["title"]).lower().startswith("learn javascript"))
+
     def test_chatbot_persists_messages_in_history(self):
         """Both user and assistant messages should appear in subsequent bootstrap."""
         self._login()

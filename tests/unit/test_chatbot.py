@@ -87,6 +87,21 @@ class TestFallbackResponse(unittest.TestCase):
         self.assertIn("flappy bird", result["task"]["title"].lower())
         self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
 
+    def test_help_me_make_web_app_creates_step_plan(self):
+        """Very brief build prompts should still trigger practical task generation."""
+        result = _fallback_response("Help me make a web app", [])
+        self.assertEqual(result["action"], "create_task")
+        self.assertTrue(result["task"]["title"].lower().startswith("build "))
+        self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
+
+    def test_help_me_learn_javascript_creates_learning_plan_and_session_hint(self):
+        """Learning asks should create learning-plan tasks and request a new chat session."""
+        result = _fallback_response("Help me learn JavaScript", [])
+        self.assertEqual(result["action"], "create_task")
+        self.assertTrue(result["task"]["title"].lower().startswith("learn javascript"))
+        self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
+        self.assertTrue(result.get("start_new_session"))
+
     def test_feedback_context_is_reflected_in_hint_message(self):
         feedback_context = {
             "chatbot": {"top_intents": ["learning", "task_planning"]},
