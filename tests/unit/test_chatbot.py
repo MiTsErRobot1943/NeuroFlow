@@ -75,24 +75,30 @@ class TestFallbackResponse(unittest.TestCase):
     def test_build_request_creates_task_with_subtasks(self):
         """Build-style asks should create a task and include generated subtasks."""
         result = _fallback_response("how to build a flask web app", [])
-        self.assertEqual(result["action"], "create_task")
-        self.assertTrue(result["task"]["title"].lower().startswith("build "))
-        self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
+        self.assertEqual(result["action"], "create_project_tasks")
+        self.assertIn("project", result["project"]["list_name"].lower())
+        self.assertGreaterEqual(len(result["project"]["tasks"]), 4)
 
     def test_set_tasks_for_making_phrase_creates_subtasks(self):
         """Quoted phrasing should map to create_task and produce a practical task breakdown."""
         message = "set tasks for making flappy bird python flask browser game"
         result = _fallback_response(message, [])
-        self.assertEqual(result["action"], "create_task")
-        self.assertIn("flappy bird", result["task"]["title"].lower())
-        self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
+        self.assertEqual(result["action"], "create_project_tasks")
+        self.assertIn("flappy bird", result["project"]["list_name"].lower())
+        self.assertGreaterEqual(len(result["project"]["tasks"]), 4)
 
     def test_help_me_make_web_app_creates_step_plan(self):
         """Very brief build prompts should still trigger practical task generation."""
         result = _fallback_response("Help me make a web app", [])
-        self.assertEqual(result["action"], "create_task")
-        self.assertTrue(result["task"]["title"].lower().startswith("build "))
-        self.assertGreaterEqual(len(result["task"]["subtasks"]), 4)
+        self.assertEqual(result["action"], "create_project_tasks")
+        self.assertGreaterEqual(len(result["project"]["tasks"]), 4)
+
+    def test_build_plan_notes_include_learning_support_when_difficulty_exists(self):
+        profile = {"learning_difficulties": ["dyslexia"]}
+        result = _fallback_response("Help me build an api", [], profile=profile)
+        self.assertEqual(result["action"], "create_project_tasks")
+        notes = " ".join(str(task.get("notes", "")) for task in result["project"]["tasks"])
+        self.assertIn("accessibility support", notes.lower())
 
     def test_help_me_learn_javascript_creates_learning_plan_and_session_hint(self):
         """Learning asks should create learning-plan tasks and request a new chat session."""

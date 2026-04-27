@@ -8,6 +8,7 @@ plus centralized route registration and security middleware.
 import secrets
 import hashlib
 import re
+from src.services import task_store as task_store_service
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -147,6 +148,30 @@ def _onboarding_redirect_target(user_id: int, db_path: str) -> Optional[str]:
     if onboarding.get("required"):
         return url_for("onboarding")
     return None
+
+
+def _build_chatbot_profile(user_id: int, db_path: str, payload_profile: object) -> dict[str, object]:
+    profile: dict[str, object] = {}
+    if isinstance(payload_profile, dict):
+        profile.update(payload_profile)
+
+    onboarding_state = _get_onboarding_state(user_id, db_path)
+    onboarding_data = onboarding_state.get("data") if isinstance(onboarding_state, dict) else {}
+    if isinstance(onboarding_data, dict):
+        if onboarding_data.get("programming_knowledge"):
+            profile["programming_knowledge"] = onboarding_data.get("programming_knowledge")
+        if isinstance(onboarding_data.get("learning_difficulties"), list):
+            profile["learning_difficulties"] = onboarding_data.get("learning_difficulties")
+        if "has_project_experience" in onboarding_data:
+            profile["has_project_experience"] = onboarding_data.get("has_project_experience")
+        if onboarding_data.get("project_examples"):
+            profile["project_examples"] = onboarding_data.get("project_examples")
+
+    latest_profile_fn = getattr(task_store_service, "get_latest_project_profile", None)
+    latest_profile = latest_profile_fn(user_id, db_path) if callable(latest_profile_fn) else None
+    if isinstance(latest_profile, dict):
+        profile.update({k: v for k, v in latest_profile.items() if v not in (None, "")})
+    return profile
 
 
 def _require_completed_session(db_path: str):
@@ -686,7 +711,7 @@ def register_routes(app: Flask) -> None:
         if selected_task_id is not None:
             selected_task = next((task for task in tasks_snapshot if int(task.get("id", 0)) == selected_task_id), None)
 
-        profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else None
+        profile = _build_chatbot_profile(user_id, db_path, payload.get("profile"))
         feedback_context = get_user_feedback_context(
             app.config.get("ANALYTICS_DATABASE_URL"),
             session.get("username", "user"),
@@ -701,19 +726,58 @@ def register_routes(app: Flask) -> None:
         )
 
         created_task = None
+        created_tasks = []
         if chatbot_response.get("action") == "create_task":
             task_payload = chatbot_response.get("task") or {}
             list_name = str(task_payload.get("list_name", "General")).strip() or "General"
             selected_list = create_task_list(user_id, list_name, db_path)
+            raw_task_subtasks = task_payload.get("subtasks")
+            task_subtasks = [str(item) for item in raw_task_subtasks if str(item).strip()] if isinstance(raw_task_subtasks, list) else []
             created_task = create_task(
                 user_id=user_id,
                 title=str(task_payload.get("title", "New Task")).strip() or "New Task",
                 list_id=int(selected_list["id"]),
                 notes=str(task_payload.get("notes", "")).strip(),
-                subtasks=[str(item) for item in task_payload.get("subtasks", []) if str(item).strip()],
+                subtasks=task_subtasks,
                 db_path=db_path,
                 source="chatbot",
             )
+            created_tasks = [created_task]
+        elif chatbot_response.get("action") == "create_project_tasks":
+            raw_project_payload = chatbot_response.get("project")
+            project_payload: dict[str, object] = raw_project_payload if isinstance(raw_project_payload, dict) else {}
+            list_name = str(project_payload.get("list_name") or "Project Plan").strip() or "Project Plan"
+            selected_list = create_task_list(user_id, list_name, db_path)
+            task_defs: list[dict[str, object]] = []
+            raw_task_defs = project_payload.get("tasks")
+            if isinstance(raw_task_defs, list):
+                for raw_item in raw_task_defs:
+                    if isinstance(raw_item, dict):
+                        task_defs.append(raw_item)
+
+            for item in task_defs:
+                if not isinstance(item, dict):
+                    continue
+                raw_subtasks = item.get("subtasks")
+                subtasks: list[str] = []
+                if isinstance(raw_subtasks, list):
+                    for raw_subtask in raw_subtasks:
+                        clean_subtask = str(raw_subtask).strip()
+                        if clean_subtask:
+                            subtasks.append(clean_subtask)
+                created_tasks.append(
+                    create_task(
+                        user_id=user_id,
+                        title=str(item.get("title", "")).strip() or "Project milestone",
+                        list_id=int(selected_list["id"]),
+                        notes=str(item.get("notes", "")).strip(),
+                        subtasks=subtasks,
+                        db_path=db_path,
+                        source="chatbot",
+                    )
+                )
+            if created_tasks:
+                created_task = created_tasks[0]
 
         assistant_message = str(chatbot_response.get("message", "I am ready to help with your tasks."))
         append_chat_message(user_id, "assistant", assistant_message, db_path)
@@ -725,11 +789,12 @@ def register_routes(app: Flask) -> None:
             {
                 "action": chatbot_response.get("action", "none"),
                 "created_task": bool(created_task),
+                "created_task_count": len(created_tasks),
                 "allow_web_search": allow_web_search,
                 **_build_query_pattern_payload(message),
             },
         )
-        return jsonify({"ok": True, "response": chatbot_response, "created_task": created_task})
+        return jsonify({"ok": True, "response": chatbot_response, "created_task": created_task, "created_tasks": created_tasks})
 
     @app.route("/api/projects/predefined", methods=["POST"])
     def api_predefined_project_tasks():
