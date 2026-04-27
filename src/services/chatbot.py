@@ -36,10 +36,19 @@ _BUILD_APP_INTENT_PATTERNS = [
         r"(?P<goal>(?:building|making|creating|developing)\s+.+)$",
         re.IGNORECASE,
     ),
+    re.compile(
+        r"^help\s+me\s+(?:set\s+up|setup|get\s+started\s+with|build|make|create|develop)\s+"
+        r"(?:a\s+|an\s+|the\s+)?(?P<goal>.+)$",
+        re.IGNORECASE,
+    ),
 ]
 _LEARNING_PLAN_PATTERNS = [
     re.compile(
         r"^(?:help\s+me\s+learn|teach\s+me|i\s+want\s+to\s+learn|learn)\s+(?P<topic>.+)$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^help\s+me\s+(?:get\s+started\s+with|learn|understand|master)\s+(?P<topic>.+)$",
         re.IGNORECASE,
     ),
     re.compile(
@@ -50,7 +59,7 @@ _LEARNING_PLAN_PATTERNS = [
     ),
 ]
 _APP_NOUN_PATTERN = re.compile(
-    r"\b(app|application|game|website|web\s*app|tool|platform|api|system|browser\s+game)\b",
+    r"\b(app|application|game|website|web\s*app|tool|platform|api|system|browser\s+game|chatbot|bot|dashboard|service|project|framework|library)\b",
     re.IGNORECASE,
 )
 _CODE_SNIPPET_PATTERN = re.compile(
@@ -527,12 +536,20 @@ def generate_response(
         "task (object when action=create_task). "
         "If action=create_task include task.title, task.notes, task.subtasks (array of strings), "
         "task.list_name. Keep concise.\n"
-        "If the user asks how to build/make/create an app, application, website, API, or game, "
-        "set action=create_task and generate 4-6 practical subtasks.\n"
-        "Treat concise prompts like 'help me make a web app' as create_task intents and produce a practical step plan.\n"
-        "Treat learning prompts like 'help me learn JavaScript' as create_task intents with a learning plan title and step-by-step subtasks.\n"
-        "Treat requests like 'set tasks for making flappy bird python flask browser game' as create_task intents.\n"
-        "For CS/project questions, provide clear conceptual help and short syntax examples when useful.\n"
+        "\n"
+        "CRITICAL CONSTRAINT: When the user requests help with a project, application, learning topic, or asks "
+        "'help me [verb] [noun]' (e.g., 'help me make a web app', 'help me learn Python', 'help me build an API'), "
+        "you MUST treat it as a create_task intent and ALWAYS generate 4-6 practical subtasks. "
+        "Do NOT generate tasks without subtasks in these cases.\n"
+        "\n"
+        "Task generation rules:\n"
+        "- 'help me build/make/create an app/website/API/game' → create_task with practical subtasks\n"
+        "- 'help me learn [topic]' → create_task with learning plan subtasks\n"
+        "- 'help me set up [project]' → create_task with setup/bootstrap subtasks\n"
+        "- Brief requests like 'Build a todo app', 'Make a chatbot', 'Learn JavaScript' → create_task with subtasks\n"
+        "- Requests asking for help or guidance on projects → ALWAYS generate subtasks (minimum 4, maximum 6)\n"
+        "\n"
+        "For CS/project questions without explicit help/build intent, provide clear conceptual help and short syntax examples.\n"
         "For unrelated topics, ask web-search permission before browsing.\n"
         "Use the analytics feedback signals to tune response style and planning granularity.\n"
         f"User message: {message}\n"
