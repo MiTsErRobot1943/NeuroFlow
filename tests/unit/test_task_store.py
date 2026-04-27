@@ -17,6 +17,7 @@ from src.services.task_store import (
     create_task,
     create_task_list,
     delete_task,
+    get_latest_project_profile,
     get_task,
     list_chat_history,
     list_task_lists,
@@ -270,6 +271,33 @@ class TestProjectProfileDeadlines(TaskStoreTestBase):
                 },
                 self.db_path,
             )
+
+    def test_get_latest_project_profile_returns_last_profile_with_metadata(self):
+        save_project_profile(
+            self.user_id,
+            {
+                "project_name": "Older profile",
+                "project_type": "web",
+                "language_framework": "Python + Flask",
+            },
+            self.db_path,
+        )
+        save_project_profile(
+            self.user_id,
+            {
+                "project_name": "Newest profile",
+                "project_type": "backend",
+                "experience_level": "intermediate",
+                "language_framework": "Python + FastAPI",
+            },
+            self.db_path,
+        )
+
+        latest = get_latest_project_profile(self.user_id, self.db_path)
+        self.assertIsNotNone(latest)
+        self.assertEqual(latest["project_name"], "Newest profile")
+        self.assertEqual(latest["project_type"], "backend")
+        self.assertEqual(latest["language_framework"], "Python + FastAPI")
 
 
 if __name__ == "__main__":

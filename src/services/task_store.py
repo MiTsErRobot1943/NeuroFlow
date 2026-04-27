@@ -425,3 +425,60 @@ def save_project_profile(user_id: int, payload: dict[str, str], db_path: str) ->
     finally:
         conn.close()
 
+
+def _parse_planner_metadata(notes: str) -> dict[str, str]:
+    marker = "Planner metadata:"
+    if marker not in notes:
+        return {}
+
+    metadata_text = notes.split(marker, 1)[1].strip()
+    parsed: dict[str, str] = {}
+    for chunk in metadata_text.split(";"):
+        piece = chunk.strip()
+        if "=" not in piece:
+            continue
+        key, value = piece.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if key:
+            parsed[key] = value
+    return parsed
+
+
+def get_latest_project_profile(user_id: int, db_path: str) -> dict[str, Any] | None:
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            """
+            SELECT id, project_name, web_experience, desktop_experience, architecture_experience,
+                   database_experience, target_deadline, notes
+            FROM project_profiles
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return None
+
+    metadata = _parse_planner_metadata(str(row["notes"] or ""))
+    return {
+        "id": row["id"],
+        "project_name": row["project_name"],
+        "web_experience": row["web_experience"],
+        "desktop_experience": row["desktop_experience"],
+        "architecture_experience": row["architecture_experience"],
+        "database_experience": row["database_experience"],
+        "target_deadline": row["target_deadline"],
+        "project_type": metadata.get("project_type", ""),
+        "experience_level": metadata.get("experience_level", ""),
+        "language_framework": metadata.get("language_framework", ""),
+        "time_management_style": metadata.get("time_management_style", ""),
+        "memory_style": metadata.get("memory_style", ""),
+    }
+
+

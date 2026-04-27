@@ -36,10 +36,19 @@ _BUILD_APP_INTENT_PATTERNS = [
         r"(?P<goal>(?:building|making|creating|developing)\s+.+)$",
         re.IGNORECASE,
     ),
+    re.compile(
+        r"^help\s+me\s+(?:set\s+up|setup|get\s+started\s+with|build|make|create|develop)\s+"
+        r"(?:a\s+|an\s+|the\s+)?(?P<goal>.+)$",
+        re.IGNORECASE,
+    ),
 ]
 _LEARNING_PLAN_PATTERNS = [
     re.compile(
         r"^(?:help\s+me\s+learn|teach\s+me|i\s+want\s+to\s+learn|learn)\s+(?P<topic>.+)$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^help\s+me\s+(?:get\s+started\s+with|learn|understand|master)\s+(?P<topic>.+)$",
         re.IGNORECASE,
     ),
     re.compile(
@@ -50,7 +59,7 @@ _LEARNING_PLAN_PATTERNS = [
     ),
 ]
 _APP_NOUN_PATTERN = re.compile(
-    r"\b(app|application|game|website|web\s*app|tool|platform|api|system|browser\s+game)\b",
+    r"\b(app|application|game|website|web\s*app|tool|platform|api|system|browser\s+game|chatbot|bot|dashboard|service|project|framework|library)\b",
     re.IGNORECASE,
 )
 _CODE_SNIPPET_PATTERN = re.compile(
@@ -174,6 +183,11 @@ def _extract_task_draft_title(message: str) -> str | None:
     return None
 
 
+def _is_explicit_single_task_request(message: str) -> bool:
+    normalized = re.sub(r"\s+", " ", message.strip())
+    return bool(_CREATE_TASK_PATTERN.match(normalized))
+
+
 def _extract_build_goal(message: str) -> str | None:
     normalized = re.sub(r"\s+", " ", message.strip())
     if not normalized:
@@ -214,6 +228,111 @@ def _build_subtasks_for_goal(goal: str) -> list[str]:
         "Add tests and validate the main user flow end-to-end",
         "Prepare deployment/run instructions and polish documentation",
     ]
+
+
+def _normalize_learning_difficulties(profile: dict[str, Any] | None) -> list[str]:
+    if not isinstance(profile, dict):
+        return []
+
+    raw = profile.get("learning_difficulties", [])
+    if isinstance(raw, str):
+        values = [item.strip().lower() for item in raw.split(",") if item.strip()]
+    elif isinstance(raw, list):
+        values = [str(item).strip().lower() for item in raw if str(item).strip()]
+    else:
+        values = []
+
+    return [item for item in values if item and item != "none"]
+
+
+def _build_learning_support_hints(profile: dict[str, Any] | None) -> list[str]:
+    difficulties = set(_normalize_learning_difficulties(profile))
+    hints: list[str] = []
+
+    if "dyslexia" in difficulties:
+        hints.append("Prefer short bullet-based notes and plain wording for each step")
+    if "adhd" in difficulties or "executive_function" in difficulties:
+        hints.append("Keep milestones small and time-boxed so momentum is easier to maintain")
+    if "visual_processing" in difficulties:
+        hints.append("Use high-contrast labels and avoid crowded checklists")
+    if "auditory_processing" in difficulties:
+        hints.append("Keep written instructions explicit instead of relying on verbal memory")
+    if "memory" in difficulties:
+        hints.append("Repeat key decisions in task notes to reduce context switching")
+
+    return hints
+
+
+def _build_project_task_breakdown(goal: str, profile: dict[str, Any] | None = None) -> dict[str, Any]:
+    clean_goal = str(goal or "Project").strip(" .:-") or "Project"
+    panel_name = clean_goal[:80]
+    if not panel_name.lower().endswith("project"):
+        panel_name = f"{panel_name} Project"
+
+    programming_knowledge = ""
+    if isinstance(profile, dict):
+        programming_knowledge = str(profile.get("programming_knowledge") or "").strip()
+    support_hints = _build_learning_support_hints(profile)
+    support_suffix = f" Accessibility support: {'; '.join(support_hints[:2])}." if support_hints else ""
+    readiness_suffix = (
+        f" Skill baseline reported as {programming_knowledge}."
+        if programming_knowledge and programming_knowledge.lower() != "none"
+        else ""
+    )
+
+    return {
+        "list_name": panel_name[:80],
+        "tasks": [
+            {
+                "title": f"Define the outcome for {clean_goal}",
+                "notes": (
+                    "Why this task is necessary: a clear outcome keeps the project focused and prevents"
+                    f" unplanned scope growth.{readiness_suffix}{support_suffix}"
+                )[:300],
+                "subtasks": [
+                    "Write one sentence describing the user problem this project solves - this anchors all later decisions.",
+                    "List 3 to 5 must-have features for the first version - this protects delivery scope.",
+                    "List explicit non-goals - this prevents distractions and uncontrolled backlog growth.",
+                ],
+            },
+            {
+                "title": "Set up the build foundation",
+                "notes": (
+                    "Why this task is necessary: stable project setup prevents environment issues from blocking"
+                    " implementation work."
+                )[:300],
+                "subtasks": [
+                    "Create project structure and dependency list - this ensures repeatable onboarding and setup.",
+                    "Configure formatting/linting/testing checks - this catches defects earlier.",
+                    "Run a first smoke workflow - this verifies the base stack works before feature work starts.",
+                ],
+            },
+            {
+                "title": "Implement a first end-to-end feature slice",
+                "notes": (
+                    "Why this task is necessary: shipping one complete slice quickly validates architecture"
+                    " and user flow assumptions."
+                )[:300],
+                "subtasks": [
+                    "Build one user flow from input to output - this proves the system can deliver value.",
+                    "Add validation and error states - this prevents fragile user experiences.",
+                    "Capture short design notes - this preserves context for future iterations.",
+                ],
+            },
+            {
+                "title": "Harden quality and delivery readiness",
+                "notes": (
+                    "Why this task is necessary: testing and release prep reduce regressions and make handoff"
+                    " easier for future sessions."
+                )[:300],
+                "subtasks": [
+                    "Add tests for the main user path - this protects critical behavior during refactors.",
+                    "Write run/deploy instructions - this lowers setup friction for future work.",
+                    "Plan the next milestone and review blockers - this keeps progress predictable.",
+                ],
+            },
+        ],
+    }
 
 
 def _extract_learning_topic(message: str) -> str | None:
@@ -376,6 +495,7 @@ except ImportError:  # pragma: no cover - optional dependency at runtime
 def _fallback_response(
     message: str,
     tasks: list[dict[str, Any]],
+    profile: dict[str, Any] | None = None,
     allow_web_search: bool = False,
     feedback_context: dict[str, Any] | None = None,
     active_task: dict[str, Any] | None = None,
@@ -404,6 +524,16 @@ def _fallback_response(
 
     if title:
         goal = build_goal or title
+        project_like_request = (not _is_explicit_single_task_request(message)) and (
+            bool(build_goal) or bool(_APP_NOUN_PATTERN.search(goal))
+        )
+        if project_like_request:
+            project_plan = _build_project_task_breakdown(goal, profile=profile)
+            return {
+                "message": f"Created a project task panel for: {goal}",
+                "action": "create_project_tasks",
+                "project": project_plan,
+            }
         subtasks = _build_subtasks_for_goal(goal) if build_goal else []
         return {
             "message": f"Created a task draft for: {title}",
@@ -417,16 +547,11 @@ def _fallback_response(
         }
 
     if build_goal:
-        task_title = f"Build {build_goal}" if not build_goal.lower().startswith("build ") else build_goal
+        project_plan = _build_project_task_breakdown(build_goal, profile=profile)
         return {
-            "message": f"Created build plan task for: {build_goal}",
-            "action": "create_task",
-            "task": {
-                "title": task_title[:160],
-                "notes": "Generated from build-application request",
-                "subtasks": _build_subtasks_for_goal(build_goal),
-                "list_name": active_list_name,
-            },
+            "message": f"Created a project task panel for: {build_goal}",
+            "action": "create_project_tasks",
+            "project": project_plan,
         }
 
     if _WEB_SEARCH_PATTERN.search(message):
@@ -491,6 +616,7 @@ def generate_response(
     fallback = _fallback_response(
         message,
         tasks,
+        profile=profile,
         allow_web_search=allow_web_search,
         feedback_context=feedback_context,
         active_task=active_task,
@@ -523,16 +649,27 @@ def generate_response(
 
     prompt = (
         "You are NeuroFlow's assistant. Respond with JSON only and keys: "
-        "message (string), action ('none' or 'create_task' or 'request_web_permission' or 'web_search_results'), "
-        "task (object when action=create_task). "
+        "message (string), action ('none' or 'create_task' or 'create_project_tasks' or 'request_web_permission' or 'web_search_results'), "
+        "task (object when action=create_task), project (object when action=create_project_tasks). "
         "If action=create_task include task.title, task.notes, task.subtasks (array of strings), "
-        "task.list_name. Keep concise.\n"
-        "If the user asks how to build/make/create an app, application, website, API, or game, "
-        "set action=create_task and generate 4-6 practical subtasks.\n"
-        "Treat concise prompts like 'help me make a web app' as create_task intents and produce a practical step plan.\n"
-        "Treat learning prompts like 'help me learn JavaScript' as create_task intents with a learning plan title and step-by-step subtasks.\n"
-        "Treat requests like 'set tasks for making flappy bird python flask browser game' as create_task intents.\n"
-        "For CS/project questions, provide clear conceptual help and short syntax examples when useful.\n"
+        "task.list_name. If action=create_project_tasks include project.list_name and project.tasks; "
+        "each project task must include title, notes, and subtasks (3-5 strings). Keep concise.\n"
+        "\n"
+        "CRITICAL CONSTRAINT: When the user requests help with a project, application, learning topic, or asks "
+        "'help me [verb] [noun]' (e.g., 'help me make a web app', 'help me learn Python', 'help me build an API'), "
+        "you MUST create practical steps. For project/application requests use action=create_project_tasks with 4-6 "
+        "project tasks, and each project task must include 3-5 subtasks. Learning requests can still use create_task. "
+        "Do NOT generate tasks without subtasks in these cases.\n"
+        "\n"
+        "Task generation rules:\n"
+        "- 'help me build/make/create an app/website/API/game' → create_project_tasks with practical breakdown\n"
+        "- 'help me learn [topic]' → create_task with learning plan subtasks\n"
+        "- 'help me set up [project]' → create_project_tasks with setup/bootstrap subtasks\n"
+        "- Brief requests like 'Build a todo app', 'Make a chatbot' → create_project_tasks with subtasks\n"
+        "- Requests asking for help or guidance on projects → ALWAYS generate subtasks and explain why each task matters\n"
+        "- Respect user profile and learning_difficulties by adapting chunk size and instruction style in notes\n"
+        "\n"
+        "For CS/project questions without explicit help/build intent, provide clear conceptual help and short syntax examples.\n"
         "For unrelated topics, ask web-search permission before browsing.\n"
         "Use the analytics feedback signals to tune response style and planning granularity.\n"
         f"User message: {message}\n"
@@ -568,6 +705,18 @@ def _normalize_plan_tasks(raw_tasks: Any) -> list[dict[str, Any]]:
         subtasks = [str(sub).strip() for sub in raw_subtasks if str(sub).strip()] if isinstance(raw_subtasks, list) else []
         tasks.append({"title": title[:160], "notes": notes[:300], "subtasks": subtasks[:8]})
     return tasks[:8]
+
+
+def _normalize_project_payload(raw_project: Any) -> dict[str, Any] | None:
+    if not isinstance(raw_project, dict):
+        return None
+
+    list_name = str(raw_project.get("list_name", "")).strip()
+    tasks = _normalize_plan_tasks(raw_project.get("tasks"))
+    if not list_name or not tasks:
+        return None
+
+    return {"list_name": list_name[:80], "tasks": tasks}
 
 
 def _fallback_project_plan(
